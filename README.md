@@ -115,7 +115,7 @@ src/
 └── services/
     └── routeService.ts
     
-server.js             - Express backend
+backend/server.js     - Express backend
 package.json          - Dependencies
 tailwind.config.js    - Color configuration
 vite.config.ts        - Frontend build config

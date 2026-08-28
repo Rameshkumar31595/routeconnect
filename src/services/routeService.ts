@@ -89,24 +89,34 @@ export async function searchMultiModalRoutes(
   time: string,
   passengers: number
 ): Promise<RouteResult[]> {
+  const params = new URLSearchParams({
+    from: from.trim(),
+    to: to.trim(),
+    date,
+    time,
+    passengers: passengers.toString(),
+  });
+
+  let response: Response;
   try {
-    const params = new URLSearchParams({
-      from: from.trim(),
-      to: to.trim(),
-      date,
-      time,
-      passengers: passengers.toString(),
-    });
-
-    const response = await fetch(`/api/planner?${params.toString()}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch travel routes from server');
-    }
-
-    const data = await response.json();
-    return data.routes || [];
-  } catch (error) {
-    console.error('searchMultiModalRoutes error:', error);
-    return [];
+    response = await fetch(`/api/planner?${params.toString()}`);
+  } catch {
+    throw new Error('The route planner is offline. Check your connection and try again.');
   }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (!response.ok) {
+    if (contentType.includes('application/json')) {
+      const data = await response.json();
+      throw new Error(data.error || 'The route planner could not complete this search.');
+    }
+    throw new Error('The route planner is unavailable. Check that the server is running and try again.');
+  }
+
+  if (!contentType.includes('application/json')) {
+    throw new Error('The route planner returned an unexpected response.');
+  }
+
+  const data = await response.json();
+  return data.routes || [];
 }

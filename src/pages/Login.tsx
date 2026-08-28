@@ -55,39 +55,39 @@ export default function Login() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 px-4 py-10 sm:px-6 lg:px-8 flex items-center justify-center">
+    <main className="min-h-screen bg-[#F4F2ED] px-4 py-10 sm:px-6 lg:px-8 flex items-center justify-center">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 lg:flex-row lg:items-center lg:justify-between">
         
         {/* Logo and Pitch section */}
-        <section className="space-y-6 text-blue-900 lg:max-w-md shrink-0">
-          <div className="flex items-center gap-4 rounded-[2rem] bg-white/95 p-8 shadow-xl border border-blue-200/50 backdrop-blur-md">
-            <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
+        <section className="space-y-6 text-[#1F2933] lg:max-w-md shrink-0">
+          <div className="flex items-center gap-4 border-l-4 border-[#146B5B] bg-white p-6 shadow-sm">
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-[#146B5B] text-white">
               <MapPin className="h-8 w-8" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight text-blue-950 sm:text-5xl">
+              <h1 className="text-4xl font-black tracking-tight text-[#1F2933] sm:text-5xl">
                 RouteConnect
               </h1>
-              <p className="mt-2 text-xs uppercase tracking-wider font-bold text-blue-600">
+              <p className="mt-2 text-xs uppercase tracking-wider font-bold text-[#146B5B]">
                 Unified Multi-Modal Planner
               </p>
             </div>
           </div>
-          <p className="text-blue-800/80 text-sm font-semibold max-w-sm pl-4 leading-relaxed">
-            Combine Trains, Buses, Rapido, and Uber segments to find optimal travel options across India.
+          <p className="text-[#667085] text-sm font-semibold max-w-sm pl-4 leading-relaxed">
+            Compare practical combinations of trains, buses, and local rides for one clear journey.
           </p>
         </section>
 
         {/* Login form Card */}
         <section className="mx-auto w-full max-w-md">
-          <div className="rounded-[2rem] border border-blue-200 bg-white/95 p-8 shadow-2xl sm:p-10 backdrop-blur-md">
+          <div className="rounded-xl border border-[#D9DED9] bg-white p-8 shadow-sm sm:p-10">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#E8F1EE] text-[#146B5B]">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs text-blue-600 font-extrabold uppercase tracking-wider">Sign in to continue</p>
-                <p className="text-xl font-black text-blue-950">RouteConnect</p>
+                <p className="text-xs text-[#146B5B] font-extrabold uppercase tracking-wider">Your journeys, in one place</p>
+                <p className="text-xl font-black text-[#1F2933]">Sign in</p>
               </div>
             </div>
 

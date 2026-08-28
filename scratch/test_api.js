@@ -6,7 +6,7 @@ async function runTests() {
   console.log('Starting programmatic API testing...');
 
   const uniqueEmail = `test_${Date.now()}@example.com`;
-  const testPhone = '1234567890';
+  const testPhone = `${Date.now()}`.slice(-10);
 
   // 1. Sign Up
   console.log('Testing Sign Up...');
@@ -26,6 +26,7 @@ async function runTests() {
   console.log('Sign Up Response:', signUpData);
   assert.strictEqual(signUpRes.status, 201, 'Signup status should be 201');
   assert.ok(signUpData.sessionId, 'Signup should return a sessionId');
+  assert.ok(signUpData.user.id, 'Signup should return the persisted user id');
 
   // 2. Sign In with Email
   console.log('Testing Sign In with Email...');
@@ -67,6 +68,7 @@ async function runTests() {
   const profileData = await profileRes.json();
   console.log('Get Profile Response:', profileData);
   assert.strictEqual(profileRes.status, 200, 'Profile fetch status should be 200');
+  assert.strictEqual(profileData.user.id, signUpData.user.id, 'Profile should belong to the newly registered user');
 
   // 5. Logout
   console.log('Testing Logout...');

@@ -140,7 +140,7 @@ export default function Profile() {
                     </div>
 
                     {error && (
-                      <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-750 font-bold">
+                      <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-700 font-bold">
                         {error}
                       </div>
                     )}

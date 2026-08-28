@@ -19,7 +19,7 @@ app.use(cors());
 app.use(express.json());
 
 // Initialize SQLite Database
-const db = new DatabaseSync(path.join(__dirname, 'routeconnect.db'));
+const db = new DatabaseSync(path.join(__dirname, '..', 'routeconnect.db'));
 
 // Create users table
 const createTableQuery = `
@@ -251,6 +251,7 @@ for (const seg of sampleSegments) {
 
 // User helper statements
 const findUserByEmail = db.prepare('SELECT * FROM users WHERE email = ?');
+const findUserByPhone = db.prepare('SELECT * FROM users WHERE phone = ?');
 const findUserByIdentifier = db.prepare('SELECT * FROM users WHERE email = ? OR phone = ?');
 const createUser = db.prepare(
   'INSERT INTO users (name, email, phone, password) VALUES (?, ?, ?, ?)'
@@ -273,7 +274,10 @@ const sessions = new Map();
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { name, email, phone, password, confirmPassword } = req.body;
-    if (!name || !email || !phone || !password || !confirmPassword) {
+    const normalizedName = typeof name === 'string' ? name.trim() : '';
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const normalizedPhone = typeof phone === 'string' ? phone.trim() : '';
+    if (!normalizedName || !normalizedEmail || !normalizedPhone || !password || !confirmPassword) {
       return res.status(400).json({ error: 'All fields are required' });
     }
     if (password !== confirmPassword) {
@@ -282,19 +286,21 @@ app.post('/api/auth/signup', async (req, res) => {
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
-    const existingUser = findUserByEmail.get(email);
-    if (existingUser) {
-      return res.status(400).json({ error: 'You are already a user, so sign in' });
+    if (findUserByEmail.get(normalizedEmail)) {
+      return res.status(400).json({ error: 'This email is already registered, so sign in' });
+    }
+    if (findUserByPhone.get(normalizedPhone)) {
+      return res.status(400).json({ error: 'This phone number is already registered, so sign in' });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
-    createUser.run(name, email, phone, hashedPassword);
+    createUser.run(normalizedName, normalizedEmail, normalizedPhone, hashedPassword);
     const userId = getLastId.get().id;
     const sessionId = Math.random().toString(36).substring(7);
-    sessions.set(sessionId, { userId, email, name });
+    sessions.set(sessionId, { userId, email: normalizedEmail, name: normalizedName });
     return res.status(201).json({
       message: 'User registered successfully',
       sessionId,
-      user: { id: userId, name, email, phone }
+      user: { id: userId, name: normalizedName, email: normalizedEmail, phone: normalizedPhone }
     });
   } catch (error) {
     return res.status(500).json({ error: 'Signup error' });
@@ -304,7 +310,9 @@ app.post('/api/auth/signup', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { identifier, password } = req.body;
-    const user = findUserByIdentifier.get(identifier, identifier);
+    const normalizedIdentifier = typeof identifier === 'string' ? identifier.trim() : '';
+    const emailIdentifier = normalizedIdentifier.toLowerCase();
+    const user = findUserByIdentifier.get(emailIdentifier, normalizedIdentifier);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email/phone or password' });
     }
@@ -873,6 +881,25 @@ function findMultiModalRoutes(fromCity, toCity, date, timeStr, passengersCount) 
 }
 
 // REST Routes
+app.get('/api/locations', (req, res) => {
+  try {
+    const query = String(req.query.query || '').trim().toLowerCase();
+    const district = String(req.query.district || '').trim().toLowerCase();
+    const locations = db.prepare(`
+      SELECT id, name, latitude, longitude, mandal, district, state, type
+      FROM locations
+      WHERE (? = '' OR LOWER(name) LIKE '%' || ? || '%' OR LOWER(mandal) LIKE '%' || ? || '%' OR LOWER(district) LIKE '%' || ? || '%')
+        AND (? = '' OR LOWER(district) = ?)
+      ORDER BY name
+    `).all(query, query, query, query, district, district);
+
+    return res.status(200).json({ locations });
+  } catch (error) {
+    console.error('Locations error:', error);
+    return res.status(500).json({ error: 'Server error loading locations' });
+  }
+});
+
 app.get('/api/planner', (req, res) => {
   try {
     const { from, to, date, time, passengers } = req.query;

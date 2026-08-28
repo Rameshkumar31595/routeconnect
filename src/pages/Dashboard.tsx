@@ -9,19 +9,22 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [validationError, setValidationError] = useState('');
   const [date, setDate] = useState(() => {
     return new Date().toISOString().split('T')[0];
   });
 
   const handleSearch = () => {
     if (!from || !to) {
-      alert('Please fill out both From and To locations.');
+      setValidationError('Enter both a starting point and a destination to search.');
       return;
     }
     if (from.trim().toLowerCase() === to.trim().toLowerCase()) {
-      alert('Your starting point and destination are the same. Please select different locations.');
+      setValidationError('Your starting point and destination are the same. Choose two different places.');
       return;
     }
+
+    setValidationError('');
 
     // Save search parameter logs to localStorage under my_trips
     try {
@@ -85,6 +88,11 @@ export default function Dashboard() {
             loading={false}
             isValid={isValid}
           />
+          {validationError && (
+            <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" role="alert">
+              {validationError}
+            </p>
+          )}
         </div>
       </main>
     </div>

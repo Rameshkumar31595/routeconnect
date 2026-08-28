@@ -53,39 +53,39 @@ export default function Signup() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 px-4 py-10 sm:px-6 lg:px-8 flex items-center justify-center">
+    <main className="min-h-screen bg-[#F4F2ED] px-4 py-10 sm:px-6 lg:px-8 flex items-center justify-center">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 lg:flex-row lg:items-center lg:justify-between">
         
         {/* Info pitch section */}
-        <section className="space-y-6 text-blue-900 lg:max-w-md shrink-0">
-          <div className="flex items-center gap-4 rounded-[2rem] bg-white/95 p-8 shadow-xl border border-blue-200/50 backdrop-blur-md">
-            <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg">
+        <section className="space-y-6 text-[#1F2933] lg:max-w-md shrink-0">
+          <div className="flex items-center gap-4 border-l-4 border-[#146B5B] bg-white p-6 shadow-sm">
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-[#146B5B] text-white">
               <MapPin className="h-8 w-8" />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tight text-blue-955 sm:text-5xl">
-                Join Today
+              <h1 className="text-4xl font-black tracking-tight text-[#1F2933] sm:text-5xl">
+                Start planning
               </h1>
-              <p className="mt-2 text-xs uppercase tracking-wider font-bold text-blue-600">
-                RouteConnect Registration
+              <p className="mt-2 text-xs uppercase tracking-wider font-bold text-[#146B5B]">
+                Create your RouteConnect account
               </p>
             </div>
           </div>
-          <p className="text-blue-800/80 text-sm font-semibold max-w-sm pl-4 leading-relaxed">
-            Create an account to search route combinations, view interactive SVG transport maps, and customize your filters.
+          <p className="text-[#667085] text-sm font-semibold max-w-sm pl-4 leading-relaxed">
+            Save recent searches and keep useful route combinations close at hand.
           </p>
         </section>
 
         {/* Signup form Card */}
         <section className="mx-auto w-full max-w-md">
-          <div className="rounded-[2rem] border border-blue-200 bg-white/95 p-8 shadow-2xl sm:p-10 backdrop-blur-md">
+          <div className="rounded-xl border border-[#D9DED9] bg-white p-8 shadow-sm sm:p-10">
             <div className="flex items-center gap-3">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#E8F1EE] text-[#146B5B]">
                 <UserPlus className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs text-blue-600 font-extrabold uppercase tracking-wider">Create Account</p>
-                <p className="text-xl font-black text-blue-950">Registration Form</p>
+                <p className="text-xs text-[#146B5B] font-extrabold uppercase tracking-wider">A few details first</p>
+                <p className="text-xl font-black text-[#1F2933]">Create account</p>
               </div>
             </div>
 
@@ -97,13 +97,13 @@ export default function Signup() {
                   onChange={(e) => setName(e.target.value)}
                   type="text"
                   placeholder="Jane Doe"
-                  className="w-full rounded-xl border border-blue-200 bg-blue-50/20 px-4 py-2.5 text-sm text-blue-905 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-[#D9DED9] bg-white px-4 py-2.5 text-sm text-[#1F2933] outline-none transition focus:border-[#146B5B] focus:ring-1 focus:ring-[#146B5B]"
                   required
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block text-sm font-bold text-blue-955">Email Address</label>
+                <label className="block text-sm font-bold text-[#1F2933]">Email Address</label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-400" />
                   <input
@@ -118,7 +118,7 @@ export default function Signup() {
               </div>
 
               <div className="space-y-1">
-                <label className="block text-sm font-bold text-blue-955">Phone Number</label>
+                <label className="block text-sm font-bold text-[#1F2933]">Phone Number</label>
                 <div className="relative">
                   <Phone className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-400" />
                   <input
@@ -133,7 +133,7 @@ export default function Signup() {
               </div>
 
               <div className="space-y-1">
-                <label className="block text-sm font-bold text-blue-955">Password</label>
+                <label className="block text-sm font-bold text-[#1F2933]">Password</label>
                 <div className="relative">
                   <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-400" />
                   <input
@@ -156,7 +156,7 @@ export default function Signup() {
               </div>
 
               <div className="space-y-1">
-                <label className="block text-sm font-bold text-blue-955">Confirm Password</label>
+                <label className="block text-sm font-bold text-[#1F2933]">Confirm Password</label>
                 <div className="relative">
                   <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-400" />
                   <input

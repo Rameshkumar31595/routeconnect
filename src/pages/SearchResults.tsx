@@ -17,6 +17,7 @@ export default function SearchResults() {
   // Core planners state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const [allRoutes, setAllRoutes] = useState<RouteResult[]>([]);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
@@ -82,7 +83,7 @@ export default function SearchResults() {
     }
 
     fetchRoutes();
-  }, [from, to, date, navigate]);
+  }, [from, to, date, navigate, retryCount]);
 
   const handleClearFilters = () => {
     setFilterModes({ train: true, bus: true, rapido: true, uber: true, walking: true });
@@ -259,11 +260,27 @@ export default function SearchResults() {
 
         {!loading && error && (
           <div className="bg-white border border-[#D9DED9] rounded-xl p-10 text-center">
-            <p className="text-xs uppercase tracking-widest font-extrabold text-[#667085]">No Results Available</p>
+            <p className="text-xs uppercase tracking-widest font-extrabold text-red-700">Search unavailable</p>
             <p className="mt-2 text-xl font-black text-[#1F2933]">{error}</p>
-            <p className="mt-4 text-xs text-[#667085] leading-relaxed max-w-md mx-auto">
-              Please check your backend SQLite server startup logs, or try searching coordinates like Bhimavaram ➔ Vijayawada.
+            <p className="mt-3 text-sm text-[#667085] leading-relaxed max-w-md mx-auto">
+              Your search is still here. Check the connection, then try again.
             </p>
+            <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setRetryCount(count => count + 1)}
+                className="rounded-lg bg-[#146B5B] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#0f5447] transition"
+              >
+                Try again
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="rounded-lg border border-[#D9DED9] px-5 py-2.5 text-sm font-bold text-[#1F2933] hover:bg-gray-50 transition"
+              >
+                Change search
+              </button>
+            </div>
           </div>
         )}
 

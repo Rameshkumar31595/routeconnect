@@ -344,7 +344,7 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
   };
 
   return (
-    <div ref={containerRef} className="space-y-1.5 text-sm font-semibold text-blue-955 block relative">
+    <div ref={containerRef} className="space-y-1.5 text-sm font-semibold text-[#1F2933] block relative">
       <span className="flex items-center justify-between">
         <span className="flex items-center gap-2">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600 shadow-sm border border-blue-200/50">
@@ -446,7 +446,7 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
 
       {/* Map selection Modal overlay */}
       {showMapPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-955/40 backdrop-blur-sm p-4 animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F2933]/45 backdrop-blur-sm p-4 animate-fadeIn">
           <div className="w-full max-w-xl bg-white rounded-[2rem] shadow-2xl border border-blue-200 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-800 p-5 text-white">
               <div>

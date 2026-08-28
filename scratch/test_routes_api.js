@@ -23,10 +23,10 @@ async function runTests() {
   if (trainRapidoCombo) {
     console.log('Found Train + Rapido Combination Route:', trainRapidoCombo);
     assert.strictEqual(trainRapidoCombo.totalTransfers, 2);
-    assert.strictEqual(trainRapidoCombo.segments[0].price, 70); // Bhimavaram -> station
-    assert.strictEqual(trainRapidoCombo.segments[1].price, 120); // station -> station (T1 is ₹120)
-    assert.strictEqual(trainRapidoCombo.segments[2].price, 80); // station -> dest
-    assert.strictEqual(trainRapidoCombo.totalPrice, 270);
+    assert.strictEqual(trainRapidoCombo.segments[0].price, 30); // Bhimavaram -> station
+    assert.strictEqual(trainRapidoCombo.segments[1].price, 145); // station -> station (T1 is ₹145)
+    assert.strictEqual(trainRapidoCombo.segments[2].price, 46); // station -> destination
+    assert.strictEqual(trainRapidoCombo.totalPrice, 221);
   } else {
     console.log('Warning: Train + Rapido combination not found in seeded routes!');
   }

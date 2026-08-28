@@ -35,7 +35,8 @@ SE/
 │   ├── App.tsx
 │   ├── index.css                (✨ Updated lavender palette)
 │   └── main.tsx
-├── server.js                     (✨ NEW: Express backend with SQLite)
+├── backend/
+│   └── server.js                 (Express backend with SQLite)
 ├── package.json                  (✨ Updated with backend dependencies)
 ├── vite.config.ts               (✨ Added API proxy)
 ├── tailwind.config.js           (✨ Updated with lavender colors)
@@ -323,7 +324,7 @@ For production deployment:
 
 3. **Deploy:**
    - Frontend: Deploy `dist/` folder to static hosting
-   - Backend: Deploy `server.js` to Node.js hosting
+  - Backend: Deploy `backend/server.js` to Node.js hosting
    - Database: Use managed SQLite or migrate to PostgreSQL
 
 ---
@@ -341,7 +342,7 @@ For issues or questions:
 ## ✨ File Changes Summary
 
 ### New Files
-- [x] `server.js` - Express backend
+- [x] `backend/server.js` - Express backend
 - [x] `.env` - Environment configuration
 
 ### Updated Files  

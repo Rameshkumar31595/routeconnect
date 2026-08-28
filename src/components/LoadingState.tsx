@@ -2,13 +2,13 @@ import { Loader2 } from 'lucide-react';
 
 export default function LoadingState({ label }: { label: string }) {
   return (
-    <div className="rounded-[2rem] border border-purple-300/50 bg-white/95 p-10 text-center shadow-lg">
-      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-purple-100 to-purple-50 text-purple-600 shadow-md">
-        <Loader2 className="h-8 w-8 animate-spin" />
+    <div className="rounded-xl border border-[#D9DED9] bg-white p-10 text-center shadow-sm" role="status" aria-live="polite">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#E8F1EE] text-[#146B5B]">
+        <Loader2 className="h-6 w-6 animate-spin" />
       </div>
-      <p className="mt-6 text-lg font-bold text-purple-900">{label}</p>
-      <p className="mt-3 max-w-xl mx-auto text-sm leading-6 text-purple-700">
-        We&apos;re scanning the network for the fastest travel options for your route.
+      <p className="mt-5 text-base font-bold text-[#1F2933]">{label}</p>
+      <p className="mt-2 max-w-xl mx-auto text-sm leading-6 text-[#667085]">
+        Checking available trains, buses, and local connections.
       </p>
     </div>
   );
