@@ -1,4 +1,5 @@
-import { X, MapPin } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { X, MapPin, Navigation } from 'lucide-react';
 import type { RouteResult } from '../services/routeService';
 
 interface RouteMapProps {
@@ -23,7 +24,17 @@ const COORDINATES: Record<string, { x: number; y: number }> = {
   'mumbai bus station': { x: 240, y: 350 },
   'pune railway station': { x: 460, y: 150 },
   'pune bus station': { x: 460, y: 350 },
-  'pune destination': { x: 580, y: 250 }
+  'pune destination': { x: 580, y: 250 },
+
+  // Narasaraopet -> Ongole corridor coordinates
+  'narasaraopet': { x: 120, y: 250 },
+  'narasaraopet bus station': { x: 200, y: 250 },
+  'narasaraopet railway station': { x: 200, y: 170 },
+  'addanki': { x: 350, y: 200 },
+  'chilakaluripeta': { x: 350, y: 300 },
+  'ongole': { x: 580, y: 250 },
+  'ongole bus stand': { x: 500, y: 250 },
+  'ongole railway station': { x: 500, y: 170 }
 };
 
 function getNodeCoordinates(nodeName: string, isOrigin: boolean): { x: number; y: number } {
@@ -68,6 +79,141 @@ const MODE_EMOJIS = {
 };
 
 export default function RouteMap({ route, isOpen, onClose }: RouteMapProps) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const userMarkerRef = useRef<any>(null);
+  const [mapLoading, setMapLoading] = useState(false);
+  const [mapError, setMapError] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !mapRef.current) return;
+
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) return;
+
+    let cancelled = false;
+    setMapLoading(true);
+    setMapError('');
+
+    const loadGoogleMaps = () => new Promise<void>((resolve, reject) => {
+      if (window.google?.maps) {
+        resolve();
+        return;
+      }
+      const existingScript = document.querySelector('script[data-google-maps="true"]') as HTMLScriptElement | null;
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve(), { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('Google Maps failed to load.')), { once: true });
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.dataset.googleMaps = 'true';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Google Maps failed to load. Check the API key and enabled APIs.'));
+      document.head.appendChild(script);
+    });
+
+    loadGoogleMaps().then(() => {
+      if (cancelled || !mapRef.current || !window.google?.maps) return;
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: { lat: 16.3067, lng: 80.4365 },
+        zoom: 8,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true
+      });
+      mapInstanceRef.current = map;
+
+      const directionsService = new window.google.maps.DirectionsService();
+      const renderers: any[] = [];
+      const colors: Record<string, string> = {
+        train: '#2563eb',
+        bus: '#16a34a',
+        uber: '#0f172a',
+        rapido: '#ea580c',
+        walking: '#64748b'
+      };
+      const travelModes: Record<string, any> = {
+        train: 'TRANSIT',
+        bus: 'TRANSIT',
+        uber: 'DRIVING',
+        rapido: 'DRIVING',
+        walking: 'WALKING'
+      };
+
+      route.segments.forEach((segment) => {
+        const renderer = new window.google.maps.DirectionsRenderer({
+          map,
+          suppressMarkers: false,
+          polylineOptions: { strokeColor: colors[segment.mode] || '#146b5b', strokeWeight: 6, strokeOpacity: 0.85 }
+        });
+        renderers.push(renderer);
+        directionsService.route({
+          origin: segment.from,
+          destination: segment.to,
+          waypoints: (segment.stops || '').split(',').map((stop: string) => stop.trim()).filter(Boolean).map((stop: string) => ({ location: stop, stopover: true })),
+          travelMode: travelModes[segment.mode] || 'DRIVING',
+          transitOptions: segment.mode === 'train' || segment.mode === 'bus' ? { departureTime: new Date() } : undefined,
+          provideRouteAlternatives: false
+        }, (result: any, status: string) => {
+          if (cancelled) return;
+          if (status === 'OK' && result) {
+            renderer.setDirections(result);
+          } else if (!mapError) {
+            setMapError(`Google directions could not be found for ${segment.from} to ${segment.to}.`);
+          }
+        });
+      });
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+          if (cancelled) return;
+          const current = { lat: position.coords.latitude, lng: position.coords.longitude };
+          setUserLocation(current);
+          userMarkerRef.current = new window.google.maps.Marker({ map, position: current, title: 'Your current location', icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#2563eb', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 3 } });
+        }, () => undefined, { enableHighAccuracy: true, timeout: 10000 });
+      }
+
+      setMapLoading(false);
+      return () => renderers.forEach((renderer) => renderer.setMap(null));
+    }).catch((error: Error) => {
+      if (!cancelled) setMapError(error.message);
+    }).finally(() => {
+      if (!cancelled) setMapLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+      mapInstanceRef.current = null;
+      userMarkerRef.current = null;
+    };
+  }, [isOpen, route]);
+
+  const showCurrentLocation = () => {
+    if (!navigator.geolocation || !mapInstanceRef.current) {
+      setMapError('Location access is not supported by this browser.');
+      return;
+    }
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition((position) => {
+      const current = { lat: position.coords.latitude, lng: position.coords.longitude };
+      setUserLocation(current);
+      mapInstanceRef.current.setCenter(current);
+      mapInstanceRef.current.setZoom(14);
+      userMarkerRef.current?.setPosition(current);
+      userMarkerRef.current?.setVisible(true);
+      setLocationLoading(false);
+    }, (error) => {
+      setLocationLoading(false);
+      setMapError(error.code === error.PERMISSION_DENIED ? 'Location permission was denied. Allow it in your browser to show your position.' : 'Unable to access your current location.');
+    }, { enableHighAccuracy: true, timeout: 10000 });
+  };
+
   if (!isOpen) return null;
 
   // Prepare nodes mapping
@@ -137,141 +283,28 @@ export default function RouteMap({ route, isOpen, onClose }: RouteMapProps) {
 
         {/* Content Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
-          {/* Map canvas */}
-          <div className="relative bg-gradient-to-br from-blue-50/50 to-blue-100/30 rounded-2xl border border-blue-100 p-4 min-h-[350px] flex items-center justify-center overflow-hidden">
-            <svg 
-              viewBox="0 0 700 500" 
-              className="w-full max-h-[380px] select-none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* Grid Background Lines (Styling) */}
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#2563eb" strokeWidth="0.5" strokeOpacity="0.04" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" rx="16" />
+          {/* Google map canvas */}
+          <div className="relative overflow-hidden rounded-2xl border border-blue-100 bg-blue-50 min-h-[380px]">
+            <div ref={mapRef} className="absolute inset-0" />
+            {!import.meta.env.VITE_GOOGLE_MAPS_API_KEY && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-blue-50 p-6 text-center">
+                <MapPin className="h-10 w-10 text-blue-500" />
+                <p className="text-sm font-bold text-blue-900">Add VITE_GOOGLE_MAPS_API_KEY to show live Google directions.</p>
+                <a href="https://www.google.com/maps" target="_blank" rel="noreferrer" className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700">Open Google Maps</a>
+              </div>
+            )}
+            {mapLoading && <div className="absolute inset-0 flex items-center justify-center bg-blue-50/85 text-sm font-bold text-blue-700">Loading Google directions...</div>}
+            {mapError && <div className="absolute bottom-3 left-3 right-3 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-700 shadow">{mapError}</div>}
+          </div>
 
-              {/* Draw Route Paths */}
-              {segmentsWithCoords.map((seg, idx) => {
-                const color = MODE_COLORS[seg.mode as keyof typeof MODE_COLORS] || '#64748b';
-                
-                // Draw path line
-                return (
-                  <g key={`path-${idx}`}>
-                    {/* Glow outline */}
-                    <line 
-                      x1={seg.fromCoord.x} 
-                      y1={seg.fromCoord.y} 
-                      x2={seg.toCoord.x} 
-                      y2={seg.toCoord.y} 
-                      stroke={color} 
-                      strokeWidth="10" 
-                      strokeLinecap="round"
-                      strokeOpacity="0.12" 
-                    />
-                    
-                    {/* Main track line */}
-                    <line 
-                      x1={seg.fromCoord.x} 
-                      y1={seg.fromCoord.y} 
-                      x2={seg.toCoord.x} 
-                      y2={seg.toCoord.y} 
-                      stroke={color} 
-                      strokeWidth="4" 
-                      strokeLinecap="round"
-                      strokeDasharray={seg.mode === 'walking' ? '5,5' : undefined}
-                      className={seg.mode !== 'walking' ? 'animate-dash' : undefined}
-                    />
-
-                    {/* Floating mode icon bubble halfway through the line */}
-                    <g transform={`translate(${(seg.fromCoord.x + seg.toCoord.x) / 2}, ${(seg.fromCoord.y + seg.toCoord.y) / 2})`}>
-                      <circle r="12" fill={color} className="shadow-md" />
-                      <text 
-                        textAnchor="middle" 
-                        alignmentBaseline="middle" 
-                        y="1" 
-                        fontSize="12"
-                      >
-                        {MODE_EMOJIS[seg.mode as keyof typeof MODE_EMOJIS]}
-                      </text>
-                    </g>
-                  </g>
-                );
-              })}
-
-              {/* Draw Station and City Nodes */}
-              {uniqueNodes.map((node, idx) => {
-                const isStation = node.type === 'station';
-                const isOrigin = node.type === 'origin';
-                const isDest = node.type === 'dest';
-                
-                let ringColor = 'stroke-blue-500';
-                let dotColor = 'fill-blue-600';
-                if (isOrigin) {
-                  ringColor = 'stroke-green-500';
-                  dotColor = 'fill-green-600';
-                } else if (isDest) {
-                  ringColor = 'stroke-red-500';
-                  dotColor = 'fill-red-600';
-                }
-
-                return (
-                  <g key={`node-${idx}`} className="cursor-pointer">
-                    {/* Outer pulsing ring for key nodes */}
-                    {!isStation && (
-                      <circle 
-                        cx={node.x} 
-                        cy={node.y} 
-                        r="16" 
-                        fill="none" 
-                        className={`${ringColor} stroke-2 animate-ping opacity-35`} 
-                      />
-                    )}
-                    
-                    {/* Ring border */}
-                    <circle 
-                      cx={node.x} 
-                      cy={node.y} 
-                      r={isStation ? '8' : '10'} 
-                      fill="#ffffff" 
-                      stroke={isStation ? '#94a3b8' : '#1e3a8a'}
-                      strokeWidth="3" 
-                    />
-
-                    {/* Center point dot */}
-                    <circle 
-                      cx={node.x} 
-                      cy={node.y} 
-                      r={isStation ? '4' : '5'} 
-                      className={dotColor}
-                    />
-
-                    {/* Label Badge */}
-                    <g transform={`translate(${node.x}, ${node.y + (isStation ? 22 : 26)})`}>
-                      {/* Label Text shadow container for readability */}
-                      <rect 
-                        x={-Math.min(node.label.length * 4.5, 90)} 
-                        y="-10" 
-                        width={Math.min(node.label.length * 9, 180)} 
-                        height="16" 
-                        fill="#ffffff" 
-                        rx="4" 
-                        fillOpacity="0.85" 
-                      />
-                      <text 
-                        textAnchor="middle" 
-                        fontSize={isStation ? '9' : '11'} 
-                        fontWeight="bold"
-                        fill="#0f172a"
-                      >
-                        {node.label}
-                      </text>
-                    </g>
-                  </g>
-                );
-              })}
-            </svg>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs font-semibold text-slate-600">
+              {userLocation ? 'Your current position is shown on the map.' : 'Allow location access to show your current position.'}
+            </p>
+            <button type="button" onClick={showCurrentLocation} disabled={locationLoading || !import.meta.env.VITE_GOOGLE_MAPS_API_KEY} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50">
+              <Navigation className="h-4 w-4" />
+              {locationLoading ? 'Requesting permission...' : 'Show My Location'}
+            </button>
           </div>
 
           {/* Quick Route Leg Timeline below map */}

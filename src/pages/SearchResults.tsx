@@ -54,6 +54,21 @@ export default function SearchResults() {
     direct: true,
     multimodal: true
   });
+  const [busTypes, setBusTypes] = useState({
+    express: true,
+    palleVelugu: true,
+    deluxe: true,
+    superLuxury: true,
+    other: true
+  });
+
+  const busTypeOptions = [
+    { id: 'express', label: 'Express' },
+    { id: 'palleVelugu', label: 'Palle Velugu' },
+    { id: 'deluxe', label: 'Deluxe' },
+    { id: 'superLuxury', label: 'Super Luxury' },
+    { id: 'other', label: 'Other available bus types' }
+  ] as const;
 
   useEffect(() => {
     if (!from || !to) {
@@ -91,6 +106,7 @@ export default function SearchResults() {
     setTransfers({ trans0: true, trans1: true, trans2: true, trans3plus: true });
     setDepartureTimes({ morning: true, afternoon: true, evening: true, night: true });
     setRouteTypes({ direct: true, multimodal: true });
+    setBusTypes({ express: true, palleVelugu: true, deluxe: true, superLuxury: true, other: true });
     if (allRoutes.length > 0) {
       const highestPrice = Math.max(...allRoutes.map(r => r.totalPrice));
       setMaxPrice(highestPrice > 2000 ? highestPrice : 2000);
@@ -103,6 +119,9 @@ export default function SearchResults() {
   const filteredAndSortedRoutes = useMemo(() => {
     let result = [...allRoutes];
 
+    // 0. Walking distance rule: If walking distance > 1.0 km, do not display walking option
+    result = result.filter(r => !r.segments.some(seg => seg.mode === 'walking' && seg.distanceKm > 1.0));
+
     // 1. Price budget
     result = result.filter(r => r.totalPrice <= maxPrice);
 
@@ -110,6 +129,17 @@ export default function SearchResults() {
     result = result.filter(r =>
       r.segments.every(seg => filterModes[seg.mode as keyof typeof filterModes])
     );
+
+    // Bus type filter applies to every bus leg in a journey.
+    result = result.filter(r => r.segments.every(seg => {
+      if (seg.mode !== 'bus') return true;
+      const busType = (seg.busType || seg.serviceName || '').toLowerCase();
+      if (busType.includes('express')) return busTypes.express;
+      if (busType.includes('palle velugu')) return busTypes.palleVelugu;
+      if (busType.includes('super luxury')) return busTypes.superLuxury;
+      if (busType.includes('deluxe')) return busTypes.deluxe;
+      return busTypes.other;
+    }));
 
     // 3. Durations
     result = result.filter(r => {
@@ -172,7 +202,7 @@ export default function SearchResults() {
     });
 
     return result;
-  }, [allRoutes, sortBy, maxPrice, filterModes, durations, transfers, departureTimes, routeTypes]);
+  }, [allRoutes, sortBy, maxPrice, filterModes, busTypes, durations, transfers, departureTimes, routeTypes]);
 
   // Formats date nicely
   const formatDateLabel = (dateStr: string) => {
@@ -183,7 +213,7 @@ export default function SearchResults() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F2ED] text-[#1F2933] flex flex-col">
+    <div className="min-h-screen bg-[#E7F0EC] text-[#1F2933] flex flex-col">
       <Navbar />
 
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 space-y-6">
@@ -215,7 +245,7 @@ export default function SearchResults() {
                 className="inline-flex items-center gap-2 rounded-xl border border-[#D9DED9] bg-white px-4 py-2.5 text-xs font-extrabold text-[#1F2933] hover:bg-gray-50 transition"
               >
                 <SlidersHorizontal className="h-4 w-4 text-[#146B5B]" />
-                <span>Filter</span>
+                <span>Display Options</span>
               </button>
 
               <div className="relative">
@@ -290,6 +320,7 @@ export default function SearchResults() {
               🔍 {filteredAndSortedRoutes.length} of {allRoutes.length} Route(s) Found
             </div>
 
+
             {filteredAndSortedRoutes.length === 0 ? (
               <div className="bg-white border border-[#D9DED9] rounded-xl p-10 text-center">
                 <p className="text-lg font-black text-[#1F2933]">No matching routes found</p>
@@ -319,7 +350,7 @@ export default function SearchResults() {
             <div className="flex items-center justify-between border-b border-[#D9DED9] pb-4 mb-5">
               <div className="flex items-center gap-2 text-[#1F2933]">
                 <Filter className="h-5 w-5 text-[#146B5B]" />
-                <h3 className="text-base font-black">Filter Routes</h3>
+                <h3 className="text-base font-black">Display Options</h3>
               </div>
               <button
                 onClick={() => setShowFilterPanel(false)}
@@ -376,6 +407,24 @@ export default function SearchResults() {
                         className="w-4 h-4 rounded text-[#146B5B] border-[#D9DED9] focus:ring-[#146B5B]"
                       />
                       {mode.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bus types */}
+              <div className="space-y-2">
+                <h4 className="text-xs uppercase font-extrabold tracking-wider text-[#667085]">Bus Type</h4>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {busTypeOptions.map(opt => (
+                    <label key={opt.id} className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#1F2933]">
+                      <input
+                        type="checkbox"
+                        checked={busTypes[opt.id]}
+                        onChange={() => setBusTypes(prev => ({ ...prev, [opt.id]: !prev[opt.id] }))}
+                        className="w-4 h-4 rounded text-[#146B5B] border-[#D9DED9] focus:ring-[#146B5B]"
+                      />
+                      {opt.label}
                     </label>
                   ))}
                 </div>

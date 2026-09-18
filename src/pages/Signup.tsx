@@ -53,7 +53,7 @@ export default function Signup() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F4F2ED] px-4 py-10 sm:px-6 lg:px-8 flex items-center justify-center">
+    <main className="min-h-screen bg-[#E7F0EC] px-4 py-10 sm:px-6 lg:px-8 flex items-center justify-center">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 lg:flex-row lg:items-center lg:justify-between">
         
         {/* Info pitch section */}

@@ -6,7 +6,7 @@ export default function About() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#F4F2ED] text-[#1F2933]">
+    <div className="min-h-screen bg-[#E7F0EC] text-[#1F2933]">
       <Navbar />
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
         <button

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import SearchCard from '../components/SearchCard';
+import RouteBuddyMapBackground from '../components/RouteBuddyMapBackground';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -61,15 +62,16 @@ export default function Dashboard() {
   const isValid = from.trim().length > 0 && to.trim().length > 0 && from.trim().toLowerCase() !== to.trim().toLowerCase();
 
   return (
-    <div className="min-h-screen bg-[#F4F2ED] text-[#1F2933] flex flex-col">
+    <div className="route-buddy-dashboard min-h-screen text-[#1F2933] flex flex-col">
+      <RouteBuddyMapBackground />
       <Navbar />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-12 md:py-20 flex flex-col justify-center space-y-8">
+      <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 py-12 md:py-20 flex flex-col justify-center space-y-8">
         <div className="text-center space-y-4 max-w-2xl mx-auto mb-4">
           <p className="text-xs uppercase tracking-[0.2em] font-extrabold text-[#146B5B]">
             Welcome back, {user?.name}
           </p>
-          <h1 className="text-4xl md:text-5xl font-black text-[#1F2933] tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-[#1F2933] tracking-tight">
             Plan your next journey
           </h1>
         </div>

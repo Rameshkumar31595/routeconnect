@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: light;
-  --bg-main: #F4F2ED;
+  --bg-main: #E7F0EC;
   --bg-card: #FFFFFF;
   --color-primary: #146B5B;
   --color-dark: #1F2933;
@@ -24,6 +24,62 @@ body {
   min-height: 100vh;
   background-color: var(--bg-main);
   font-family: 'DM Sans', sans-serif;
+}
+
+.route-buddy-dashboard {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #e7f0ec;
+}
+
+.route-buddy-map {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.route-buddy-map::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(231, 240, 236, .88) 0%, rgba(231, 240, 236, .74) 42%, rgba(231, 240, 236, .45) 100%);
+}
+
+.route-buddy-map svg {
+  display: block;
+  width: 100%;
+  min-height: 100%;
+}
+
+.route-buddy-title {
+  position: absolute;
+  right: 5vw;
+  bottom: 8vh;
+  color: rgba(20, 107, 91, .18);
+  font-size: clamp(1.2rem, 2.5vw, 2.6rem);
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.route-buddy-title span {
+  font-weight: 600;
+  text-transform: none;
+}
+
+@media (max-width: 640px) {
+  .route-buddy-map::after {
+    background: rgba(231, 240, 236, .82);
+  }
+
+  .route-buddy-title {
+    right: 1rem;
+    bottom: 2rem;
+    font-size: .9rem;
+  }
 }
 
 * {

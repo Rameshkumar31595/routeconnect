@@ -53,7 +53,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F2ED] text-[#1F2933] flex flex-col">
+    <div className="min-h-screen bg-[#E7F0EC] text-[#1F2933] flex flex-col">
       <Navbar />
       
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-10 space-y-6">

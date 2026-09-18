@@ -6,10 +6,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -150,6 +151,14 @@ const sampleLocations = [
   // Other AP Cities
   ['nellore', 'Nellore', 14.4426, 79.9865, 'Nellore', 'SPS Nellore', 'Andhra Pradesh', 'city'],
   ['kurnool', 'Kurnool', 15.8281, 78.0373, 'Kurnool', 'Kurnool', 'Andhra Pradesh', 'city'],
+  ['narasaraopet', 'Narasaraopet', 16.2359, 80.0499, 'Narasaraopet', 'Palnadu', 'Andhra Pradesh', 'city'],
+  ['narasaraopet bus station', 'Narasaraopet Bus Station', 16.2380, 80.0510, 'Narasaraopet', 'Palnadu', 'Andhra Pradesh', 'bus'],
+  ['narasaraopet railway station', 'Narasaraopet Railway Station', 16.2330, 80.0460, 'Narasaraopet', 'Palnadu', 'Andhra Pradesh', 'station'],
+  ['ongole', 'Ongole', 15.5057, 80.0499, 'Ongole', 'Prakasam', 'Andhra Pradesh', 'city'],
+  ['ongole bus stand', 'Ongole Bus Stand', 15.5030, 80.0480, 'Ongole', 'Prakasam', 'Andhra Pradesh', 'bus'],
+  ['ongole railway station', 'Ongole Railway Station', 15.5110, 80.0540, 'Ongole', 'Prakasam', 'Andhra Pradesh', 'station'],
+  ['addanki', 'Addanki', 15.8167, 79.9833, 'Addanki', 'Bapatla', 'Andhra Pradesh', 'town'],
+  ['chilakaluripeta', 'Chilakaluripeta', 16.0892, 80.1672, 'Chilakaluripeta', 'Palnadu', 'Andhra Pradesh', 'town'],
 
   // North India Cities
   ['delhi', 'Delhi', 28.6139, 77.2090, 'Delhi', 'Delhi', 'Delhi NCR', 'city'],
@@ -378,6 +387,169 @@ function calculateSegmentPrice(mode, basePrice, passengers) {
   return basePrice;
 }
 
+// Practical Route Corridors Registry (Extensible for future origin-destination pairs)
+const PRACTICAL_ROUTE_CORRIDORS = [
+  {
+    corridorId: 'narasaraopet-ongole',
+    origin: 'Narasaraopet',
+    destination: 'Ongole',
+    originAliases: ['narasaraopet', 'narasaraopeta', 'nrt'],
+    destinationAliases: ['ongole', 'ong'],
+    bidirectional: true,
+    routes: [
+      {
+        id: 'nrt-ong-via-addanki',
+        routeName: 'Via Addanki',
+        via: 'Addanki',
+        distanceKm: 88.0,
+        durationMinutes: 105,
+        basePrice: 110,
+        highway: 'NAM Expressway (SH 45) & NH 16',
+        villages: [
+          'Narasaraopet',
+          'Mulakalur',
+          'Rompicherla',
+          'Santhamaguluru',
+          'Kotikalapudi',
+          'Chilakaluripeta',
+          'Addanki',
+          'Medarmetla',
+          'Korisapadu',
+          'Maddipadu',
+          'Ongole'
+        ],
+        segments: [
+          {
+            mode: 'bus',
+            provider: 'APSRTC Express',
+            from: 'Narasaraopet Bus Station',
+            to: 'Chilakaluripeta Bus Stand',
+            durationMinutes: 50,
+            distanceKm: 42.0,
+            price: 45,
+            departure: '07:30',
+            arrival: '08:20',
+            serviceName: 'Express',
+            busType: 'Express',
+            stops: 'Mulakalur, Rompicherla, Santhamaguluru, Kotikalapudi'
+          },
+          {
+            mode: 'bus',
+            provider: 'APSRTC Palle Velugu',
+            from: 'Chilakaluripeta Bus Stand',
+            to: 'Ongole Bus Stand',
+            durationMinutes: 55,
+            distanceKm: 46.0,
+            price: 65,
+            departure: '08:35',
+            arrival: '09:30',
+            serviceName: 'Palle Velugu (Via Addanki)',
+            busType: 'Palle Velugu',
+            stops: 'Addanki, Medarmetla, Korisapadu, Maddipadu'
+          }
+        ]
+      },
+      {
+        id: 'nrt-ong-via-chilakaluripeta',
+        routeName: 'Via Chilakaluripeta',
+        via: 'Chilakaluripeta',
+        distanceKm: 96.0,
+        durationMinutes: 115,
+        basePrice: 125,
+        highway: 'SH 45 & NH 16 Grand Trunk Corridor',
+        villages: [
+          'Narasaraopet',
+          'Mulakalur',
+          'Kakani',
+          'Nadendla',
+          'Chilakaluripeta',
+          'Purushothapatnam',
+          'Martur',
+          'Medarmetla',
+          'Maddipadu',
+          'Ongole'
+        ],
+        segments: [
+          {
+            mode: 'bus',
+            provider: 'APSRTC Ultra Deluxe',
+            from: 'Narasaraopet Bus Station',
+            to: 'Chilakaluripeta Bus Stand',
+            durationMinutes: 55,
+            distanceKm: 45.0,
+            price: 55,
+            departure: '08:00',
+            arrival: '08:55',
+            serviceName: 'Express',
+            busType: 'Express',
+            stops: 'Mulakalur, Kakani, Nadendla'
+          },
+          {
+            mode: 'bus',
+            provider: 'APSRTC Super Luxury',
+            from: 'Chilakaluripeta Bus Stand',
+            to: 'Ongole Bus Stand',
+            durationMinutes: 60,
+            distanceKm: 51.0,
+            price: 70,
+            departure: '09:10',
+            arrival: '10:10',
+            serviceName: 'Super Luxury',
+            busType: 'Super Luxury',
+            stops: 'Purushothapatnam, Martur, Medarmetla, Maddipadu'
+          }
+        ]
+      }
+    ]
+  }
+];
+
+function normalizePlaceKey(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/\b(bus station|bus stand|railway station|junction|station|central|terminal|city)\b/gi, '')
+    .trim();
+}
+
+function matchCorridor(fromCity, toCity) {
+  const normFrom = normalizePlaceKey(fromCity);
+  const normTo = normalizePlaceKey(toCity);
+
+  for (const corridor of PRACTICAL_ROUTE_CORRIDORS) {
+    const originMatches = (
+      corridor.origin.toLowerCase() === normFrom ||
+      (corridor.originAliases && corridor.originAliases.some(a => a.toLowerCase() === normFrom))
+    );
+    const destMatches = (
+      corridor.destination.toLowerCase() === normTo ||
+      (corridor.destinationAliases && corridor.destinationAliases.some(a => a.toLowerCase() === normTo))
+    );
+
+    if (originMatches && destMatches) {
+      return { corridor, isReverse: false };
+    }
+
+    if (corridor.bidirectional) {
+      const revOriginMatches = (
+        corridor.destination.toLowerCase() === normFrom ||
+        (corridor.destinationAliases && corridor.destinationAliases.some(a => a.toLowerCase() === normFrom))
+      );
+      const revDestMatches = (
+        corridor.origin.toLowerCase() === normTo ||
+        (corridor.originAliases && corridor.originAliases.some(a => a.toLowerCase() === normTo))
+      );
+
+      if (revOriginMatches && revDestMatches) {
+        return { corridor, isReverse: true };
+      }
+    }
+  }
+  return null;
+}
+
 // Multi-Modal Pathfinding Connection Engine (covers AP Village + Indian Cities)
 function findMultiModalRoutes(fromCity, toCity, date, timeStr, passengersCount) {
   const normalizedFrom = fromCity.trim().toLowerCase();
@@ -387,6 +559,58 @@ function findMultiModalRoutes(fromCity, toCity, date, timeStr, passengersCount) 
   // Same Location check
   if (normalizedFrom === normalizedTo) {
     return [];
+  }
+
+  // 0. Check Corridor registry for practical route alternatives
+  const corridorMatch = matchCorridor(fromCity, toCity);
+  if (corridorMatch) {
+    const { corridor, isReverse } = corridorMatch;
+    const practicalRoutes = corridor.routes.map(r => {
+      const routePrice = calculateSegmentPrice('bus', r.basePrice, passengers);
+      const startPoint = isReverse ? corridor.destination : corridor.origin;
+      const endPoint = isReverse ? corridor.origin : corridor.destination;
+      const villagesList = isReverse ? [...r.villages].reverse() : [...r.villages];
+
+      const mappedSegments = r.segments.map(s => {
+        const segPrice = calculateSegmentPrice(s.mode, s.price, passengers);
+        if (!isReverse) {
+          return {
+            ...s,
+            price: segPrice
+          };
+        }
+        const reversedStops = s.stops
+          ? s.stops.split(',').map(item => item.trim()).reverse().join(', ')
+          : null;
+        return {
+          ...s,
+          from: s.to,
+          to: s.from,
+          price: segPrice,
+          departure: s.departure ? (s.departure === '07:30' ? '07:15' : '07:45') : null,
+          arrival: s.arrival ? (s.arrival === '09:15' ? '09:00' : '09:40') : null,
+          stops: reversedStops
+        };
+      });
+
+      return {
+        id: `${r.id}-${isReverse ? 'rev' : 'fwd'}-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        from: startPoint,
+        to: endPoint,
+        routeName: r.routeName,
+        via: r.via,
+        highway: r.highway,
+        villages: villagesList,
+        distanceKm: r.distanceKm,
+        totalPrice: routePrice,
+        totalDurationMinutes: r.durationMinutes,
+        totalTransfers: Math.max(0, mappedSegments.length - 1),
+        tag: null, // Neutral: show factual route differences without declaring one as "best"
+        segments: mappedSegments
+      };
+    });
+
+    return practicalRoutes;
   }
 
   // 1. Resolve locations (using loose matches first)
@@ -549,7 +773,7 @@ function findMultiModalRoutes(fromCity, toCity, date, timeStr, passengersCount) 
     }
   }
 
-  const candidateRoutes = [];
+  let candidateRoutes = [];
 
   // Compile Direct Uber Option
   const directDist = getDistance(locFrom.latitude, locFrom.longitude, locTo.latitude, locTo.longitude);
@@ -576,23 +800,52 @@ function findMultiModalRoutes(fromCity, toCity, date, timeStr, passengersCount) 
     }]
   });
 
+  // Direct Walking option: ONLY if distance is 1.0 km or less
+  if (directDist <= 1.0) {
+    const walkDist = Math.round(directDist * 10) / 10;
+    if (walkDist <= 1.0) {
+      candidateRoutes.push({
+        id: `direct-walking-${Date.now()}-${Math.random()}`,
+        from: locFrom.name,
+        to: locTo.name,
+        totalPrice: 0,
+        totalDurationMinutes: Math.max(1, Math.round(directDist * 12)),
+        totalTransfers: 0,
+        segments: [{
+          mode: 'walking',
+          provider: 'Walking',
+          from: locFrom.name,
+          to: locTo.name,
+          durationMinutes: Math.max(1, Math.round(directDist * 12)),
+          distanceKm: walkDist,
+          price: 0,
+          departure: null,
+          arrival: null
+        }]
+      });
+    }
+  }
+
   // Local connection legs builder
   function getLocalLegs(fromPoint, toPoint) {
     const d = getDistance(fromPoint.latitude, fromPoint.longitude, toPoint.latitude, toPoint.longitude);
     const options = [];
     if (d === 0) return [];
 
-    // Walking
-    if (d <= 3) {
-      options.push({
-        mode: 'walking',
-        provider: 'Walking',
-        from: fromPoint.name,
-        to: toPoint.name,
-        durationMinutes: Math.round(d * 12),
-        distanceKm: Math.round(d * 10) / 10,
-        price: 0
-      });
+    // Walking: only when walking distance is 1 km or less (<= 1.0 km)
+    if (d <= 1.0) {
+      const roundedDist = Math.round(d * 10) / 10;
+      if (roundedDist <= 1.0) {
+        options.push({
+          mode: 'walking',
+          provider: 'Walking',
+          from: fromPoint.name,
+          to: toPoint.name,
+          durationMinutes: Math.max(1, Math.round(d * 12)),
+          distanceKm: roundedDist,
+          price: 0
+        });
+      }
     }
 
     // Rapido
@@ -876,6 +1129,11 @@ function findMultiModalRoutes(fromCity, toCity, date, timeStr, passengersCount) 
       }
     });
   }
+
+  // Filter out any route containing a walking segment > 1.0 km
+  candidateRoutes = candidateRoutes.filter(
+    r => !r.segments.some(s => s.mode === 'walking' && s.distanceKm > 1.0)
+  );
 
   return candidateRoutes;
 }

@@ -11,6 +11,7 @@ export interface RouteSegment {
   trainName?: string | null;
   trainNumber?: string | null;
   serviceName?: string | null;
+  busType?: string | null;
   stops?: string | null;
 }
 
@@ -23,6 +24,11 @@ export interface RouteResult {
   totalTransfers: number;
   tag: 'cheapest' | 'fastest' | 'best' | null;
   segments: RouteSegment[];
+  routeName?: string;
+  via?: string;
+  highway?: string;
+  villages?: string[];
+  distanceKm?: number;
 }
 
 export async function searchRoutes(from: string, to: string, routeType: 'budget' | 'fast'): Promise<RouteResult[]> {
@@ -118,5 +124,7 @@ export async function searchMultiModalRoutes(
   }
 
   const data = await response.json();
-  return data.routes || [];
+  const routes: RouteResult[] = data.routes || [];
+  // Ensure walking is only shown when distance is 1.0 km or less
+  return routes.filter(route => !route.segments.some(seg => seg.mode === 'walking' && seg.distanceKm > 1.0));
 }

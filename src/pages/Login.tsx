@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, CheckCircle2, MapPin, Eye, EyeOff, Navigation } from 'lucide-react';
+import { Mail, Lock, MapPin, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -36,149 +36,96 @@ export default function Login() {
     }
   };
 
-  const handleGuestLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      // Use the seeded account to immediately authenticate the guest
-      await login('pulagorlalakshmi8@gmail.com', 'password123');
-      navigate('/dashboard');
-    } catch (e) {
-      setError('Guest login is temporarily offline. Please create a new account.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgotPassword = () => {
-    alert('A password reset link has been dispatched to your registered address.');
-  };
-
   return (
-    <main className="min-h-screen bg-[#F4F2ED] px-4 py-10 sm:px-6 lg:px-8 flex items-center justify-center">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 lg:flex-row lg:items-center lg:justify-between">
-        
-        {/* Logo and Pitch section */}
-        <section className="space-y-6 text-[#1F2933] lg:max-w-md shrink-0">
-          <div className="flex items-center gap-4 border-l-4 border-[#146B5B] bg-white p-6 shadow-sm">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-[#146B5B] text-white">
-              <MapPin className="h-8 w-8" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black tracking-tight text-[#1F2933] sm:text-5xl">
-                RouteConnect
-              </h1>
-              <p className="mt-2 text-xs uppercase tracking-wider font-bold text-[#146B5B]">
-                Unified Multi-Modal Planner
-              </p>
-            </div>
+    <main className="min-h-screen bg-[#E7F0EC] px-4 py-12 flex items-center justify-center">
+      <div className="w-full max-w-md">
+        {/* Title */}
+        <div className="flex flex-col items-center text-center mb-8">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#146B5B] text-white shadow-sm mb-3">
+            <MapPin className="h-8 w-8" />
           </div>
-          <p className="text-[#667085] text-sm font-semibold max-w-sm pl-4 leading-relaxed">
-            Compare practical combinations of trains, buses, and local rides for one clear journey.
-          </p>
-        </section>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-[#1F2933]">
+            RouteConnect
+          </h1>
+        </div>
 
-        {/* Login form Card */}
-        <section className="mx-auto w-full max-w-md">
-          <div className="rounded-xl border border-[#D9DED9] bg-white p-8 shadow-sm sm:p-10">
-            <div className="flex items-center gap-3">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#E8F1EE] text-[#146B5B]">
-                <CheckCircle2 className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-xs text-[#146B5B] font-extrabold uppercase tracking-wider">Your journeys, in one place</p>
-                <p className="text-xl font-black text-[#1F2933]">Sign in</p>
+        {/* Login Card */}
+        <div className="rounded-2xl border border-[#D9DED9] bg-white p-8 shadow-sm sm:p-10">
+          <h2 className="text-xl font-black text-[#1F2933] mb-6">
+            Sign In
+          </h2>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-[#1F2933]">
+                Email / Mobile Number
+              </label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#667085]" />
+                <input
+                  value={emailOrPhone}
+                  onChange={(e) => setEmailOrPhone(e.target.value)}
+                  type="text"
+                  placeholder="Enter email or mobile..."
+                  className="w-full rounded-xl border border-[#D9DED9] bg-white pl-11 pr-4 py-3 text-sm text-[#1F2933] placeholder-[#667085]/60 outline-none transition focus:border-[#146B5B] focus:ring-1 focus:ring-[#146B5B]"
+                  required
+                />
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <div className="space-y-2">
-                <label className="block text-sm font-bold text-blue-950">
-                  Email / Mobile Number
-                </label>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-400" />
-                  <input
-                    value={emailOrPhone}
-                    onChange={(e) => setEmailOrPhone(e.target.value)}
-                    type="text"
-                    placeholder="Enter email or mobile..."
-                    className="w-full rounded-xl border border-blue-200 bg-blue-50/20 px-12 py-3 text-sm text-blue-900 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="block text-sm font-bold text-blue-950">Password</label>
-                  <button
-                    type="button"
-                    onClick={handleForgotPassword}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800 transition"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-400" />
-                  <input
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter password..."
-                    className="w-full rounded-xl border border-blue-200 bg-blue-50/20 px-12 py-3 text-sm text-blue-900 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-400 hover:text-blue-600 transition"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <div className="rounded-xl bg-red-50 border border-red-200 p-3">
-                  <p className="text-xs text-red-700 font-extrabold">{error}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 py-3.5 text-sm font-bold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
-
-              <div className="flex flex-col gap-3 text-center text-sm pt-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-[#1F2933]">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#667085]" />
+                <input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter password..."
+                  className="w-full rounded-xl border border-[#D9DED9] bg-white pl-11 pr-11 py-3 text-sm text-[#1F2933] placeholder-[#667085]/60 outline-none transition focus:border-[#146B5B] focus:ring-1 focus:ring-[#146B5B]"
+                  required
+                  minLength={6}
+                />
                 <button
                   type="button"
-                  onClick={handleGuestLogin}
-                  disabled={loading}
-                  className="w-full rounded-xl border border-blue-200 hover:bg-blue-50 py-3 text-sm font-bold text-blue-800 transition flex items-center justify-center gap-2"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#667085] hover:text-[#1F2933] transition"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  <Navigation className="h-4 w-4 text-blue-500" />
-                  Continue as Guest
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
-
-                <p className="text-blue-800/85 mt-2">
-                  Don't have an account?{' '}
-                  <Link
-                    to="/signup"
-                    className="font-extrabold text-blue-600 hover:text-blue-800 transition"
-                  >
-                    Sign Up
-                  </Link>
-                </p>
               </div>
-            </form>
-          </div>
-        </section>
+            </div>
+
+            {error && (
+              <div className="rounded-xl bg-red-50 border border-red-200 p-3" role="alert">
+                <p className="text-xs text-red-700 font-extrabold">{error}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-[#146B5B] hover:bg-[#0E4E42] py-3.5 text-sm font-bold text-white shadow-sm transition hover:shadow disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+
+            <div className="text-center text-sm pt-2">
+              <p className="text-[#667085]">
+                Don't have an account?{' '}
+                <Link
+                  to="/signup"
+                  className="font-extrabold text-[#146B5B] hover:underline transition"
+                >
+                  Sign Up
+                </Link>
+              </p>
+            </div>
+          </form>
+        </div>
       </div>
     </main>
   );

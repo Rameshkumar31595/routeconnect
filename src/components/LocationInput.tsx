@@ -1,6 +1,12 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { MapPin, Navigation, Map, X, Globe } from 'lucide-react';
 
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 export interface SuggestionItem {
   name: string;
   type: 'city' | 'station' | 'bus' | 'airport' | 'landmark' | 'nearby_station' | 'nearby_bus';
@@ -114,6 +120,14 @@ const RICH_SUGGESTIONS: SuggestionItem[] = [
   // Other AP Cities
   { name: 'Nellore', type: 'city', subtitle: 'Nellore Mandal, SPS Nellore, Andhra Pradesh', district: 'Sri Potti Sriramulu Nellore' },
   { name: 'Kurnool', type: 'city', subtitle: 'Kurnool Mandal, Kurnool, Andhra Pradesh', district: 'Kurnool' },
+  { name: 'Narasaraopet', type: 'city', subtitle: 'Narasaraopet Mandal, Palnadu, Andhra Pradesh', district: 'Palnadu' },
+  { name: 'Narasaraopet Bus Station', type: 'bus', subtitle: 'Narasaraopet Mandal, Palnadu, Andhra Pradesh', district: 'Palnadu' },
+  { name: 'Narasaraopet Railway Station', type: 'station', subtitle: 'Narasaraopet Mandal, Palnadu, Andhra Pradesh', district: 'Palnadu' },
+  { name: 'Ongole', type: 'city', subtitle: 'Ongole Mandal, Prakasam, Andhra Pradesh', district: 'Prakasam' },
+  { name: 'Ongole Bus Stand', type: 'bus', subtitle: 'Ongole Mandal, Prakasam, Andhra Pradesh', district: 'Prakasam' },
+  { name: 'Ongole Railway Station', type: 'station', subtitle: 'Ongole Mandal, Prakasam, Andhra Pradesh', district: 'Prakasam' },
+  { name: 'Addanki', type: 'city', subtitle: 'Addanki Mandal, Bapatla, Andhra Pradesh', district: 'Bapatla' },
+  { name: 'Chilakaluripeta', type: 'city', subtitle: 'Chilakaluripeta Mandal, Palnadu, Andhra Pradesh', district: 'Palnadu' },
 
   // North India Major Cities
   { name: 'Delhi', type: 'city', subtitle: 'National Capital Territory, Delhi NCR, India', district: 'Delhi NCR' },
@@ -182,6 +196,8 @@ const SUGGESTED_MAP_PINS = [
   { name: 'Tirupati', lat: 13.6288, lon: 79.4192, x: 210, y: 410 },
   { name: 'Bhimavaram', lat: 16.5449, lon: 81.5212, x: 290, y: 245 },
   { name: 'Guntur', lat: 16.3067, lon: 80.4365, x: 250, y: 270 },
+  { name: 'Narasaraopet', lat: 16.2359, lon: 80.0499, x: 235, y: 285 },
+  { name: 'Ongole', lat: 15.5057, lon: 80.0499, x: 235, y: 340 },
 ];
 
 interface LocationInputProps {
@@ -197,8 +213,16 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
   const [customPin, setCustomPin] = useState<{ x: number; y: number } | null>(null);
+  const [googleMapError, setGoogleMapError] = useState('');
+  const [googleMapLoading, setGoogleMapLoading] = useState(false);
+  const [selectedMapLocation, setSelectedMapLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  const [requestLocationOnOpen, setRequestLocationOnOpen] = useState(false);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('all');
   const containerRef = useRef<HTMLDivElement>(null);
+  const googleMapRef = useRef<HTMLDivElement>(null);
+  const googleMapInstanceRef = useRef<any>(null);
+  const googleMarkerRef = useRef<any>(null);
+  const googleGeocoderRef = useRef<any>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -209,6 +233,107 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!showMapPicker || !googleMapRef.current) return;
+
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      setGoogleMapLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setGoogleMapLoading(true);
+    setGoogleMapError('');
+
+    const loadGoogleMaps = () => new Promise<void>((resolve, reject) => {
+      if (window.google?.maps) {
+        resolve();
+        return;
+      }
+
+      const existingScript = document.querySelector('script[data-google-maps="true"]') as HTMLScriptElement | null;
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve(), { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('Google Maps failed to load.')), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=geocoding`;
+      script.async = true;
+      script.defer = true;
+      script.dataset.googleMaps = 'true';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Google Maps failed to load. Check the API key and enabled APIs.'));
+      document.head.appendChild(script);
+    });
+
+    loadGoogleMaps()
+      .then(() => {
+        if (cancelled || !googleMapRef.current || !window.google?.maps) return;
+        const defaultCenter = { lat: 16.3067, lng: 80.4365 };
+        const map = new window.google.maps.Map(googleMapRef.current, {
+          center: defaultCenter,
+          zoom: 8,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: true,
+        });
+        const marker = new window.google.maps.Marker({ map, position: defaultCenter, draggable: true, visible: false });
+        const geocoder = new window.google.maps.Geocoder();
+        googleMapInstanceRef.current = map;
+        googleMarkerRef.current = marker;
+        googleGeocoderRef.current = geocoder;
+
+        const selectCoordinate = (lat: number, lng: number) => {
+          const position = { lat, lng };
+          marker.setPosition(position);
+          marker.setVisible(true);
+          map.panTo(position);
+          geocoder.geocode({ location: position }, (results: any[], status: string) => {
+            const address = status === 'OK' && results?.[0]?.formatted_address
+              ? results[0].formatted_address
+              : `Pinned Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+            if (!cancelled) setSelectedMapLocation({ lat, lng, address });
+          });
+        };
+
+        map.addListener('click', (event: any) => {
+          if (event.latLng) selectCoordinate(event.latLng.lat(), event.latLng.lng());
+        });
+        marker.addListener('dragend', () => {
+          const position = marker.getPosition();
+          if (position) selectCoordinate(position.lat(), position.lng());
+        });
+
+        if (requestLocationOnOpen && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => selectCoordinate(position.coords.latitude, position.coords.longitude),
+            () => setGoogleMapError('Location permission was denied. You can still click the map to choose a location.'),
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+          setRequestLocationOnOpen(false);
+        } else if (requestLocationOnOpen) {
+          setGoogleMapError('Location permission is not supported by this browser. You can still click the map to choose a location.');
+          setRequestLocationOnOpen(false);
+        }
+      })
+      .catch((error: Error) => {
+        if (!cancelled) setGoogleMapError(error.message);
+      })
+      .finally(() => {
+        if (!cancelled) setGoogleMapLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      googleMapInstanceRef.current = null;
+      googleMarkerRef.current = null;
+      googleGeocoderRef.current = null;
+    };
+  }, [showMapPicker, requestLocationOnOpen]);
 
   const filteredSuggestions = useMemo(() => {
     if (!value.trim()) return [];
@@ -322,25 +447,60 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
       },
       (error) => {
         console.error(error);
-        onChange('Bhimavaram, Andhra Pradesh (My Location)');
+        alert(error.code === error.PERMISSION_DENIED
+          ? 'Location permission was denied. Allow location access in your browser and try again.'
+          : 'Unable to determine your current location.');
         setGeoLoading(false);
-        setIsFocused(false);
       },
       { timeout: 8000 }
     );
-  };
-
-  const handleMapCanvasClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setCustomPin({ x, y });
   };
 
   const confirmMapSelection = (selectedName: string) => {
     onChange(selectedName);
     setShowMapPicker(false);
     setCustomPin(null);
+  };
+
+  const useCurrentLocationOnGoogleMap = () => {
+    if (!navigator.geolocation) {
+      setGoogleMapError('Location permission is not supported by this browser.');
+      return;
+    }
+
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        if (!googleMapInstanceRef.current || !googleGeocoderRef.current) {
+          setSelectedMapLocation({
+            lat: latitude,
+            lng: longitude,
+            address: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`
+          });
+          setGeoLoading(false);
+          return;
+        }
+        googleMapInstanceRef.current?.setZoom(15);
+        googleMapInstanceRef.current?.panTo({ lat: latitude, lng: longitude });
+        googleMarkerRef.current?.setPosition({ lat: latitude, lng: longitude });
+        googleMarkerRef.current?.setVisible(true);
+        googleGeocoderRef.current?.geocode({ location: { lat: latitude, lng: longitude } }, (results: any[], status: string) => {
+          const address = status === 'OK' && results?.[0]?.formatted_address
+            ? results[0].formatted_address
+            : `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+          setSelectedMapLocation({ lat: latitude, lng: longitude, address });
+          setGeoLoading(false);
+        });
+      },
+      (error) => {
+        setGeoLoading(false);
+        setGoogleMapError(error.code === error.PERMISSION_DENIED
+          ? 'Location permission was denied. Allow location access in your browser and try again.'
+          : 'Unable to determine your current location.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   return (
@@ -402,6 +562,7 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
               type="button"
               onMouseDown={(e) => {
                 e.preventDefault();
+                setRequestLocationOnOpen(true);
                 setShowMapPicker(true);
                 setIsFocused(false);
               }}
@@ -457,6 +618,7 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
                 onClick={() => {
                   setShowMapPicker(false);
                   setCustomPin(null);
+                  setSelectedMapLocation(null);
                 }}
                 className="rounded-full bg-white/20 p-2 hover:bg-white/30 transition"
               >
@@ -466,65 +628,58 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
 
             <div className="p-5 space-y-4 flex-1">
               <p className="text-xs text-blue-850 font-semibold flex items-center gap-1.5 bg-blue-50 p-3 rounded-xl border border-blue-100">
-                🗺 Select a key AP district city node, or click on the grid to drop a custom geocoded pin.
+                🗺 Click anywhere on Google Maps, drag the pin, or use your current location. Google will identify the selected address.
               </p>
 
-              {/* Map Canvas */}
-              <div className="relative bg-gradient-to-br from-blue-50 to-sky-50 rounded-2xl border border-blue-200 overflow-hidden min-h-[300px]">
-                <svg
-                  viewBox="0 0 500 500"
-                  onClick={handleMapCanvasClick}
-                  className="w-full h-full max-h-[350px] cursor-crosshair select-none"
-                >
-                  <defs>
-                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#2563eb" strokeWidth="0.5" strokeOpacity="0.04" />
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#grid)" />
-
-                  <path d="M 50 450 Q 200 350 250 250 T 450 100" fill="none" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.12" />
-
-                  {SUGGESTED_MAP_PINS.map((pin, idx) => (
-                    <g
-                      key={idx}
-                      className="group cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        confirmMapSelection(pin.name);
-                      }}
+              <div ref={googleMapRef} className="relative min-h-[320px] rounded-2xl border border-blue-200 overflow-hidden bg-blue-50">
+                {googleMapLoading && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-blue-50/90 text-sm font-bold text-blue-700">
+                    Loading Google Maps...
+                  </div>
+                )}
+                {googleMapError && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center p-6 text-center text-sm font-bold text-red-700 bg-red-50">
+                    {googleMapError}
+                  </div>
+                )}
+                {!googleMapLoading && !googleMapError && !import.meta.env.VITE_GOOGLE_MAPS_API_KEY && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center bg-blue-50">
+                    <Map className="h-10 w-10 text-blue-500" />
+                    <p className="text-sm font-bold text-blue-900">Google Maps preview is unavailable in this environment.</p>
+                    <a
+                      href="https://www.google.com/maps/@16.3067,80.4365,8z"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
                     >
-                      <circle cx={pin.x} cy={pin.y} r="10" fill="none" className="stroke-blue-500 stroke-2 group-hover:scale-150 transition-all origin-center" />
-                      <circle cx={pin.x} cy={pin.y} r="5" fill="#2563eb" className="group-hover:fill-blue-700 transition" />
-                      <text x={pin.x} y={pin.y - 12} textAnchor="middle" fontSize="9" fontWeight="bold" fill="#1e3a8a">
-                        {pin.name}
-                      </text>
-                    </g>
-                  ))}
-
-                  {customPin && (
-                    <g className="animate-bounce">
-                      <circle cx={customPin.x} cy={customPin.y} r="12" fill="none" stroke="#ef4444" strokeWidth="2" />
-                      <circle cx={customPin.x} cy={customPin.y} r="5" fill="#ef4444" />
-                      <text x={customPin.x} y={customPin.y - 16} textAnchor="middle" fontSize="9" fontWeight="extrabold" fill="#b91c1c">
-                        Custom Pinned Point
-                      </text>
-                    </g>
-                  )}
-                </svg>
+                      Open Google Maps
+                    </a>
+                  </div>
+                )}
               </div>
 
-              {customPin && (
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <button
-                  onClick={() => {
-                    const mockLat = (18.0 - (customPin.y / 500) * 5).toFixed(4);
-                    const mockLon = (79.0 + (customPin.x / 500) * 5).toFixed(4);
-                    confirmMapSelection(`Pinned Point (${mockLat}, ${mockLon})`);
-                  }}
-                  className="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition shadow-md"
+                  type="button"
+                  onClick={useCurrentLocationOnGoogleMap}
+                  disabled={geoLoading || Boolean(googleMapError)}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition shadow-md"
                 >
-                  📍 Confirm Pinned Location
+                  {geoLoading ? 'Requesting location permission...' : '📍 Use My Current Location'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => selectedMapLocation && confirmMapSelection(selectedMapLocation.address)}
+                  disabled={!selectedMapLocation}
+                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl transition shadow-md"
+                >
+                  ✓ Use Selected Location
+                </button>
+              </div>
+              {selectedMapLocation && (
+                <p className="text-xs font-bold text-[#1F2933] bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                  Selected: {selectedMapLocation.address}
+                </p>
               )}
             </div>
           </div>
