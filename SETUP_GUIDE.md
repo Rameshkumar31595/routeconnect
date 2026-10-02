@@ -73,6 +73,20 @@ The Vite server will start on `http://localhost:5173`
 ### Step 3: Access the Application
 Open your browser to: **http://localhost:5173**
 
+### Optional: Enable live Google Maps route and bus-facility insights
+1. Enable Routes API, Places API (New), and Geocoding API in the Google Cloud project with billing enabled.
+2. Put a server-restricted key in `backend/.env` as `GOOGLE_MAPS_SERVER_API_KEY`. Keep it separate from the browser key in the root `.env`.
+3. Restart the backend. Searches then show the live road route, nearby transport points, and a route to the nearest bus stop/stand that lies along the requested corridor.
+
+Google route and place content is fetched live and is not copied into the database. The backend retains only Google Place IDs and first/last retrieval timestamps, which are exempt from Places API caching restrictions. Displayed Google Maps content is attributed in the results view.
+
+### Optional: Enable date-specific flight offers
+1. Create a Duffel account and server-side access token.
+2. Add `DUFFEL_ACCESS_TOKEN` to `backend/.env` and restart the backend.
+3. Flight searches use the selected travel date and compare up to three nearby airports at each end, with up to two connections. Configure the Google server key above to get road/public-transit airport access legs.
+
+Offers and airport reference results are requested live and are not persisted. Fare and baggage information is only shown when the provider returns it. Flight offers can expire or change; ground-transfer fares and airport waiting/check-in time are not included in flight totals.
+
 ---
 
 ## 🎨 Color Palette

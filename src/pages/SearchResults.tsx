@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import RouteCard from '../components/RouteCard';
 import LoadingState from '../components/LoadingState';
-import { searchMultiModalRoutes, RouteResult } from '../services/routeService';
+import { searchMultiModalRoutes, FlightSearchInfo, RouteInsights, RouteResult } from '../services/routeService';
 import { SlidersHorizontal, ArrowUpDown, X, Filter, ChevronLeft } from 'lucide-react';
 
 export default function SearchResults() {
@@ -13,12 +13,20 @@ export default function SearchResults() {
   const from = searchParams.get('from') || '';
   const to = searchParams.get('to') || '';
   const date = searchParams.get('date') || '';
+  const isExplicitCurrentLocation = /^(?:📍\s*)?(?:my\s+)?current\s+location$/i.test(from.trim());
+  const originLatitude = Number(searchParams.get('fromLat'));
+  const originLongitude = Number(searchParams.get('fromLng'));
+  const hasGpsOrigin = isExplicitCurrentLocation && searchParams.get('origin') === 'gps'
+    && Number.isFinite(originLatitude) && originLatitude >= -90 && originLatitude <= 90
+    && Number.isFinite(originLongitude) && originLongitude >= -180 && originLongitude <= 180;
 
   // Core planners state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retryCount, setRetryCount] = useState(0);
   const [allRoutes, setAllRoutes] = useState<RouteResult[]>([]);
+  const [routeInsights, setRouteInsights] = useState<RouteInsights | null>(null);
+  const [flightSearch, setFlightSearch] = useState<FlightSearchInfo | null>(null);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
 
@@ -28,9 +36,13 @@ export default function SearchResults() {
   const [filterModes, setFilterModes] = useState({
     train: true,
     bus: true,
+    auto: true,
+    cab: true,
     rapido: true,
     uber: true,
-    walking: true
+    walking: true,
+    flight: true,
+    airport_transfer: true
   });
   const [durations, setDurations] = useState({
     under1: true,
@@ -80,11 +92,27 @@ export default function SearchResults() {
       setLoading(true);
       setError('');
       try {
-        // Query route planner endpoint with default daytime and passengers limit
-        const results = await searchMultiModalRoutes(from, to, date, '12:00', 1);
-        setAllRoutes(results);
-        if (results.length > 0) {
-          const highestPrice = Math.max(...results.map(r => r.totalPrice));
+        const plannerResponse = await searchMultiModalRoutes(
+          from,
+          to,
+          date,
+          1,
+          hasGpsOrigin ? { latitude: originLatitude, longitude: originLongitude } : undefined
+        );
+        const results = plannerResponse.routes;
+        setRouteInsights(plannerResponse.insights);
+        setFlightSearch(plannerResponse.flightSearch);
+        const isCurrentGpsOrigin = hasGpsOrigin && plannerResponse.originType === 'CURRENT_GPS_LOCATION';
+        const displayRoutes = results.filter(route => {
+          const rideSegments = route.segments.filter(segment => segment.mode === 'uber' || segment.mode === 'rapido');
+          return isCurrentGpsOrigin || rideSegments.length === 0;
+        });
+        setAllRoutes(displayRoutes);
+        if (displayRoutes.length > 0) {
+          const localCurrencyPrices = displayRoutes
+            .filter(route => !route.currency || route.currency === 'INR')
+            .map(route => route.totalPrice);
+          const highestPrice = localCurrencyPrices.length > 0 ? Math.max(...localCurrencyPrices) : 2000;
           setMaxPrice(highestPrice > 2000 ? highestPrice : 2000);
         } else {
           setError('No travel routes found matching these parameters.');
@@ -98,17 +126,30 @@ export default function SearchResults() {
     }
 
     fetchRoutes();
-  }, [from, to, date, navigate, retryCount]);
+  }, [from, to, date, navigate, retryCount, hasGpsOrigin, originLatitude, originLongitude]);
 
   const handleClearFilters = () => {
-    setFilterModes({ train: true, bus: true, rapido: true, uber: true, walking: true });
+    setFilterModes({
+      train: true,
+      bus: true,
+      auto: true,
+      cab: true,
+      rapido: true,
+      uber: true,
+      walking: true,
+      flight: true,
+      airport_transfer: true
+    });
     setDurations({ under1: true, hours1to2: true, hours2to4: true, over4: true });
     setTransfers({ trans0: true, trans1: true, trans2: true, trans3plus: true });
     setDepartureTimes({ morning: true, afternoon: true, evening: true, night: true });
     setRouteTypes({ direct: true, multimodal: true });
     setBusTypes({ express: true, palleVelugu: true, deluxe: true, superLuxury: true, other: true });
     if (allRoutes.length > 0) {
-      const highestPrice = Math.max(...allRoutes.map(r => r.totalPrice));
+      const localCurrencyPrices = allRoutes
+        .filter(route => !route.currency || route.currency === 'INR')
+        .map(route => route.totalPrice);
+      const highestPrice = localCurrencyPrices.length > 0 ? Math.max(...localCurrencyPrices) : 2000;
       setMaxPrice(highestPrice > 2000 ? highestPrice : 2000);
     } else {
       setMaxPrice(2000);
@@ -119,11 +160,16 @@ export default function SearchResults() {
   const filteredAndSortedRoutes = useMemo(() => {
     let result = [...allRoutes];
 
-    // 0. Walking distance rule: If walking distance > 1.0 km, do not display walking option
-    result = result.filter(r => !r.segments.some(seg => seg.mode === 'walking' && seg.distanceKm > 1.0));
+    // 0. Walking distance rule: If pure walking distance > 2.0 km or access leg > 2.5 km, do not display
+    result = result.filter(r => {
+      const isPureWalking = r.segments.length === 1 && r.segments[0].mode === 'walking';
+      if (isPureWalking && r.segments[0].distanceKm > 2.0) return false;
+      if (r.segments.some(seg => seg.mode === 'walking' && seg.distanceKm > 2.5)) return false;
+      return true;
+    });
 
     // 1. Price budget
-    result = result.filter(r => r.totalPrice <= maxPrice);
+    result = result.filter(r => r.priceIsPartial || (r.currency && r.currency !== 'INR') || r.totalPrice <= maxPrice);
 
     // 2. Modes filter
     result = result.filter(r =>
@@ -168,9 +214,19 @@ export default function SearchResults() {
 
     // 6. Departure slots
     result = result.filter(r => {
-      const firstSeg = r.segments.find(s => s.departure) || r.segments[0];
-      if (!firstSeg || !firstSeg.departure) return true;
-      const hour = parseInt(firstSeg.departure.split(':')[0]);
+      const depStr = r.departureTimeRaw || (r.segments.find(s => s.departure)?.departure);
+      if (!depStr) return true;
+      let hour: number;
+      if (depStr.includes(':')) {
+        const parts = depStr.split(':');
+        hour = parseInt(parts[0], 10);
+        if (depStr.toLowerCase().includes('pm') && hour < 12) hour += 12;
+        if (depStr.toLowerCase().includes('am') && hour === 12) hour = 0;
+      } else {
+        const parsed = new Date(depStr);
+        hour = parsed.getHours();
+      }
+      if (Number.isNaN(hour)) return true;
       if (hour >= 6 && hour < 12) return departureTimes.morning;
       if (hour >= 12 && hour < 17) return departureTimes.afternoon;
       if (hour >= 17 && hour < 21) return departureTimes.evening;
@@ -179,41 +235,76 @@ export default function SearchResults() {
 
     // 7. Sort implementation
     result.sort((a, b) => {
-      if (sortBy === 'cheapest') return a.totalPrice - b.totalPrice;
+      if (sortBy === 'cheapest') {
+        if (a.currency && b.currency && a.currency !== b.currency) return 0;
+        return a.totalPrice - b.totalPrice;
+      }
       if (sortBy === 'fastest') return a.totalDurationMinutes - b.totalDurationMinutes;
       if (sortBy === 'transfers') return a.totalTransfers - b.totalTransfers;
 
       if (sortBy === 'earliest') {
-        const depA = a.segments.find(s => s.departure)?.departure || '23:59';
-        const depB = b.segments.find(s => s.departure)?.departure || '23:59';
+        const depA = a.departureTimeRaw || a.segments.find(s => s.departure)?.departure || '23:59';
+        const depB = b.departureTimeRaw || b.segments.find(s => s.departure)?.departure || '23:59';
         return depA.localeCompare(depB);
       }
 
       if (sortBy === 'latest') {
-        const arrA = [...a.segments].reverse().find(s => s.arrival)?.arrival || '00:00';
-        const arrB = [...b.segments].reverse().find(s => s.arrival)?.arrival || '00:00';
+        const arrA = a.arrivalTimeRaw || [...a.segments].reverse().find(s => s.arrival)?.arrival || '00:00';
+        const arrB = b.arrivalTimeRaw || [...b.segments].reverse().find(s => s.arrival)?.arrival || '00:00';
         return arrB.localeCompare(arrA);
       }
 
       // Default: recommended tagging score rank
-      const tagA = a.tag === 'best' ? -100 : (a.tag === 'cheapest' ? -50 : 0);
-      const tagB = b.tag === 'best' ? -100 : (b.tag === 'cheapest' ? -50 : 0);
-      return tagA - tagB;
+      const getTagWeight = (r: RouteResult) => {
+        if (r.tag === 'best') return -100;
+        if (r.tag === 'fastest') return -70;
+        if (r.tag === 'budget' || r.tag === 'cheapest') return -50;
+        return 0;
+      };
+      return getTagWeight(a) - getTagWeight(b);
     });
 
     return result;
   }, [allRoutes, sortBy, maxPrice, filterModes, busTypes, durations, transfers, departureTimes, routeTypes]);
+
+  // Requirement: The route which is having less time is fastest, the route having lowest cost is budget route
+  const { minDuration, minCost } = useMemo(() => {
+    if (filteredAndSortedRoutes.length === 0) {
+      return { minDuration: null, minCost: null };
+    }
+    const durations = filteredAndSortedRoutes.map(r => r.totalDurationMinutes);
+    const costs = filteredAndSortedRoutes.map(r => r.totalPrice);
+    return {
+      minDuration: Math.min(...durations),
+      minCost: Math.min(...costs)
+    };
+  }, [filteredAndSortedRoutes]);
 
   // Formats date nicely
   const formatDateLabel = (dateStr: string) => {
     if (!dateStr) return '';
     const parsed = new Date(dateStr);
     if (isNaN(parsed.getTime())) return dateStr;
-    return parsed.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+    return parsed.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
   };
 
+  const formatDuration = (mins: number) => {
+    const hours = Math.floor(mins / 60);
+    const minutes = mins % 60;
+    return `${hours > 0 ? `${hours}h ` : ''}${minutes}m`;
+  };
+
+  const formatPrice = (price: number, currency?: string | null) => new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: currency || 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(price);
+
+
+
   return (
-    <div className="min-h-screen bg-[#E7F0EC] text-[#1F2933] flex flex-col">
+    <div className="min-h-screen bg-[#F1F4F3] text-[#1F2933] flex flex-col">
       <Navbar />
 
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 space-y-6">
@@ -227,7 +318,7 @@ export default function SearchResults() {
         </button>
 
         {/* Route metadata header card */}
-        <div className="bg-white border border-[#D9DED9] p-5 md:p-6 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white border border-[#D9DED9] p-5 md:p-6 rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-[#1F2933]">
               {from} ➔ {to}
@@ -242,7 +333,7 @@ export default function SearchResults() {
             <div className="flex items-center gap-2.5 self-start md:self-center">
               <button
                 onClick={() => setShowFilterPanel(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-[#D9DED9] bg-white px-4 py-2.5 text-xs font-extrabold text-[#1F2933] hover:bg-gray-50 transition"
+                className="inline-flex items-center gap-2 rounded-xl border border-[#D9DED9] bg-white px-4 py-2.5 text-xs font-extrabold text-[#1F2933] hover:bg-gray-50 transition cursor-pointer"
               >
                 <SlidersHorizontal className="h-4 w-4 text-[#146B5B]" />
                 <span>Display Options</span>
@@ -251,7 +342,7 @@ export default function SearchResults() {
               <div className="relative">
                 <button
                   onClick={() => setShowSortDropdown(!showSortDropdown)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[#D9DED9] bg-white px-4 py-2.5 text-xs font-extrabold text-[#1F2933] hover:bg-gray-50 transition"
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#D9DED9] bg-white px-4 py-2.5 text-xs font-extrabold text-[#1F2933] hover:bg-gray-50 transition cursor-pointer"
                 >
                   <ArrowUpDown className="h-4 w-4 text-[#146B5B]" />
                   <span>Sort</span>
@@ -261,7 +352,7 @@ export default function SearchResults() {
                   <div className="absolute right-0 mt-2 w-48 rounded-xl bg-white shadow-lg border border-[#D9DED9] z-35 overflow-hidden">
                     {[
                       { id: 'recommended', label: '⭐ Recommended' },
-                      { id: 'cheapest', label: '💰 Cheapest' },
+                      { id: 'cheapest', label: '💰 Budget Route' },
                       { id: 'fastest', label: '⚡ Fastest' },
                       { id: 'transfers', label: '🔄 Fewest Transfers' },
                       { id: 'earliest', label: '🌅 Earliest Departure' },
@@ -285,7 +376,6 @@ export default function SearchResults() {
           )}
         </div>
 
-        {/* Results Body */}
         {loading && <LoadingState label="Analyzing schedules and compiling optimal travel options..." />}
 
         {!loading && error && (
@@ -315,24 +405,55 @@ export default function SearchResults() {
         )}
 
         {!loading && !error && (
-          <div className="space-y-4">
-            <div className="text-xs font-black text-[#146B5B] bg-[#146B5B]/10 border border-[#146B5B]/20 px-3 py-2.5 rounded-lg w-fit">
-              🔍 {filteredAndSortedRoutes.length} of {allRoutes.length} Route(s) Found
+          <div className="space-y-6">
+            {/* Travel Options Section Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+              <div>
+                <h2 className="text-xl font-black text-[#1F2933]">
+                  Travel Options ({filteredAndSortedRoutes.length})
+                </h2>
+                <p className="text-xs text-[#667085] mt-0.5 font-medium">
+                  Showing available travel options one by one. Click "Show Details" for complete step-by-step navigation.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Verified Schedules & Fares
+                </span>
+              </div>
             </div>
-
 
             {filteredAndSortedRoutes.length === 0 ? (
               <div className="bg-white border border-[#D9DED9] rounded-xl p-10 text-center">
-                <p className="text-lg font-black text-[#1F2933]">No matching routes found</p>
+                <p className="text-lg font-black text-[#1F2933]">No matching travel options found</p>
                 <p className="mt-1 text-xs text-[#667085]">
-                  Click on "Clear All" in the Filter Panel to widen your schedule filters.
+                  Click on "Display Options" to adjust your preferences or widen your schedule filters.
                 </p>
+                <button
+                  onClick={handleClearFilters}
+                  className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#146B5B] px-4 py-2 text-xs font-bold text-white hover:bg-[#0f5447] transition"
+                >
+                  Reset all filters
+                </button>
               </div>
             ) : (
-              <div className="space-y-5">
-                {filteredAndSortedRoutes.map((route) => (
-                  <RouteCard key={route.id} route={route} />
-                ))}
+              /* Travel Options displayed ONE BY ONE down the page */
+              <div className="space-y-5" aria-label="Available Travel Options">
+                {filteredAndSortedRoutes.map((route, index) => {
+                  const isFastest = minDuration !== null && route.totalDurationMinutes === minDuration;
+                  const isBudget = minCost !== null && route.totalPrice === minCost;
+                  return (
+                    <div key={route.id} id={`route-${route.id}`}>
+                      <RouteCard
+                        route={route}
+                        routeIndex={index + 1}
+                        isFastest={isFastest}
+                        isBudget={isBudget}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -395,9 +516,15 @@ export default function SearchResults() {
                   {[
                     { id: 'train', label: ' Indian Railways (🚆)' },
                     { id: 'bus', label: ' Bus Service (🚌)' },
-                    { id: 'rapido', label: ' Rapido Bike (🛵)' },
-                    { id: 'uber', label: ' Uber Cabs (🚗)' },
-                    { id: 'walking', label: ' Walking (🚶)' }
+                    ...(hasGpsOrigin ? [
+                      { id: 'uber', label: ' Uber Cabs (🚗)' },
+                      { id: 'rapido', label: ' Rapido Bike (🛵)' }
+                    ] : []),
+                    { id: 'auto', label: ' Auto / Tuk-tuk (🛺)' },
+                    { id: 'cab', label: ' Taxi / Cab (🚕)' },
+                    { id: 'walking', label: ' Walking (🚶)' },
+                    { id: 'flight', label: ' Flight (✈️)' },
+                    { id: 'airport_transfer', label: ' Airport access (🚕)' }
                   ].map(mode => (
                     <label key={mode.id} className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#1F2933]">
                       <input

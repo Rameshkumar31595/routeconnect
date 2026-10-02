@@ -93,7 +93,12 @@ export default function Navbar() {
     { name: 'Home', path: '/dashboard', icon: MapPin },
     { name: 'My Trips', path: '#my-trips', icon: Briefcase, action: openMyTripsModal },
     { name: 'Saved Routes', path: '#saved', icon: Bookmark, action: openSavedRoutesModal },
-    { name: 'Profile', path: '/profile', icon: User },
+    {
+      name: 'Profile',
+      path: '/profile',
+      icon: User,
+      action: !user ? () => setShowDropdown(prev => !prev) : undefined
+    },
   ];
 
   return (
@@ -118,7 +123,7 @@ export default function Navbar() {
                   <button
                     key={item.name}
                     onClick={item.action}
-                    className="text-xs uppercase tracking-wider font-extrabold text-[#667085] hover:text-[#146B5B] transition"
+                    className="text-xs uppercase tracking-wider font-extrabold text-[#667085] hover:text-[#146B5B] transition cursor-pointer"
                   >
                     {item.name}
                   </button>
@@ -144,24 +149,36 @@ export default function Navbar() {
             {showMobileMenu ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
 
-          {/* Desktop User Dropdown */}
+          {/* Desktop User / Profile Dropdown */}
           <div className="hidden md:flex items-center shrink-0">
-            {user && (
-              <div className="relative" ref={dropdownRef}>
+            <div className="relative" ref={dropdownRef}>
+              {user ? (
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2 rounded-full bg-gray-50 px-4 py-2 text-sm font-semibold text-[#1F2933] border border-[#D9DED9] transition hover:bg-gray-100"
+                  className="flex items-center gap-2 rounded-full bg-gray-50 px-3.5 py-1.5 text-sm font-semibold text-[#1F2933] border border-[#D9DED9] transition hover:bg-gray-100 cursor-pointer"
                 >
                   <div className="flex items-center justify-center h-7 w-7 rounded-full bg-[#146B5B] text-white text-xs font-bold">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <span>{user.name}</span>
                 </button>
+              ) : (
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-black text-[#1F2933] border border-[#D9DED9] transition hover:bg-gray-50 hover:border-[#146B5B] shadow-2xs cursor-pointer"
+                >
+                  <div className="flex items-center justify-center h-6 w-6 rounded-full bg-[#146B5B]/10 text-[#146B5B]">
+                    <User className="h-3.5 w-3.5" />
+                  </div>
+                  <span>Profile</span>
+                </button>
+              )}
 
-                {showDropdown && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-lg bg-white shadow-lg border border-[#D9DED9] z-50 overflow-hidden">
+              {showDropdown && (
+                user ? (
+                  <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-xl border border-[#D9DED9] z-50 overflow-hidden animate-fadeIn">
                     <div className="px-4 py-3 border-b border-[#D9DED9] bg-gray-50">
-                      <p className="text-sm font-semibold text-[#1F2933]">{user.name}</p>
+                      <p className="text-sm font-bold text-[#1F2933]">{user.name}</p>
                       <p className="text-xs text-[#667085] truncate">{user.email}</p>
                     </div>
                     <div className="py-1">
@@ -170,29 +187,63 @@ export default function Navbar() {
                           navigate('/profile');
                           setShowDropdown(false);
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-[#1F2933] hover:bg-gray-50 transition"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-[#1F2933] hover:bg-gray-50 transition cursor-pointer"
                       >
                         <User className="h-4 w-4 text-[#667085]" />
                         User Details
                       </button>
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 transition"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50 transition cursor-pointer"
                       >
                         <LogOut className="h-4 w-4" />
                         Logout
                       </button>
                     </div>
                   </div>
-                )}
-              </div>
-            )}
+                ) : (
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white shadow-xl border border-[#D9DED9] z-50 overflow-hidden animate-fadeIn">
+                    <div className="px-4 py-3 bg-gray-50 border-b border-[#D9DED9]">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#146B5B]/10 text-[#146B5B]">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-[#1F2933]">Account Profile</p>
+                          <p className="text-[11px] text-[#667085]">Sign in to access your journeys</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      <button
+                        onClick={() => {
+                          navigate('/login');
+                          setShowDropdown(false);
+                        }}
+                        className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-[#146B5B] hover:bg-[#0f5447] text-white text-xs font-black transition shadow-2xs cursor-pointer"
+                      >
+                        Sign In
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigate('/signup');
+                          setShowDropdown(false);
+                        }}
+                        className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-[#D9DED9] hover:bg-gray-50 text-[#1F2933] text-xs font-black transition cursor-pointer"
+                      >
+                        Sign Up
+                      </button>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
           </div>
         </div>
 
         {/* Mobile menu panel */}
-        {showMobileMenu && user && (
-          <div className="md:hidden pb-4 border-t border-[#D9DED9]">
+        {showMobileMenu && (
+          <div className="md:hidden pb-4 border-t border-[#D9DED9] bg-white">
             <div className="mt-3 space-y-1">
               {menuItems.map((item) => {
                 if (item.action) {
@@ -219,13 +270,44 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-              <button
-                onClick={handleLogout}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50"
-              >
-                <LogOut className="h-4.5 w-4.5" />
-                Logout
-              </button>
+
+              {!user && (
+                <div className="pt-3 px-4 border-t border-[#D9DED9] space-y-2">
+                  <p className="text-xs font-extrabold uppercase tracking-wider text-[#667085]">Profile Options</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        navigate('/login');
+                        setShowMobileMenu(false);
+                      }}
+                      className="flex-1 py-2.5 px-3 rounded-xl bg-[#146B5B] text-white text-xs font-black text-center shadow-xs cursor-pointer"
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate('/signup');
+                        setShowMobileMenu(false);
+                      }}
+                      className="flex-1 py-2.5 px-3 rounded-xl border border-[#D9DED9] bg-white text-[#1F2933] text-xs font-black text-center cursor-pointer"
+                    >
+                      Sign Up
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {user && (
+                <div className="pt-2 border-t border-[#D9DED9]">
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 cursor-pointer"
+                  >
+                    <LogOut className="h-4.5 w-4.5" />
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

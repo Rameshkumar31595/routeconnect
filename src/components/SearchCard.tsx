@@ -6,6 +6,7 @@ interface SearchCardProps {
   to: string;
   date: string;
   onFromChange: (value: string) => void;
+  onCurrentLocation: (latitude: number, longitude: number) => void;
   onToChange: (value: string) => void;
   onDateChange: (value: string) => void;
   onSwapLocations: () => void;
@@ -19,6 +20,7 @@ export default function SearchCard({
   to,
   date,
   onFromChange,
+  onCurrentLocation,
   onToChange,
   onDateChange,
   onSwapLocations,
@@ -27,15 +29,15 @@ export default function SearchCard({
   isValid,
 }: SearchCardProps) {
   return (
-    <div className="w-full bg-white p-6 md:p-8 border border-[#D9DED9] rounded-xl shadow-sm">
+    <div className="w-full bg-[#F8FAF9] p-6 md:p-8 border border-[#D9DED9] rounded-xl shadow-sm">
       <div className="mb-6">
         <p className="text-xs uppercase tracking-[0.2em] font-extrabold text-[#146B5B]">Journey Planner</p>
         <h2 className="mt-1 text-2xl font-black text-[#1F2933]">Find travel routes across India</h2>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-end">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* From & To Group with Centered Overlapping Swap Button */}
-        <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-0 relative items-end">
+        <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-0 relative items-start">
           {/* From Location */}
           <div className="md:pr-3">
             <LocationInput
@@ -43,6 +45,7 @@ export default function SearchCard({
               placeholder="Enter starting location..."
               value={from}
               onChange={onFromChange}
+              onCurrentLocation={onCurrentLocation}
             />
           </div>
           
@@ -90,7 +93,7 @@ export default function SearchCard({
               value={date}
               onChange={(e) => onDateChange(e.target.value)}
               min={new Date().toISOString().split('T')[0]}
-              className="w-full pl-11 pr-4 py-3 text-sm font-semibold text-[#1F2933] border border-[#D9DED9] rounded-xl bg-white focus:border-[#146B5B] focus:ring-1 focus:ring-[#146B5B] outline-none transition"
+              className="w-full pl-11 pr-4 py-3 text-sm font-semibold text-[#1F2933] border border-[#D9DED9] rounded-xl bg-white shadow-sm focus:border-[#146B5B] focus:ring-1 focus:ring-[#146B5B] outline-none transition"
               required
             />
           </div>
@@ -103,7 +106,7 @@ export default function SearchCard({
           type="button"
           onClick={onSearch}
           disabled={!isValid || loading}
-          className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-[#146B5B] hover:bg-[#0f5447] text-white px-8 py-3.5 text-sm font-extrabold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40"
+          className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-[#146B5B] hover:bg-[#0f5447] text-white px-8 py-3.5 text-sm font-extrabold shadow-md hover:shadow-lg transition disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? 'Searching...' : 'Find All Routes'}
         </button>

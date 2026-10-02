@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: light;
-  --bg-main: #E7F0EC;
+  --bg-main: #F1F4F3;
   --bg-card: #FFFFFF;
   --color-primary: #146B5B;
   --color-dark: #1F2933;
@@ -30,7 +30,7 @@ body {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  background: #e7f0ec;
+  background: #f1f4f3;
 }
 
 .route-buddy-map {
@@ -45,7 +45,7 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(231, 240, 236, .88) 0%, rgba(231, 240, 236, .74) 42%, rgba(231, 240, 236, .45) 100%);
+  background: linear-gradient(90deg, rgba(241, 244, 243, .88) 0%, rgba(241, 244, 243, .74) 42%, rgba(241, 244, 243, .45) 100%);
 }
 
 .route-buddy-map svg {
@@ -72,7 +72,7 @@ body {
 
 @media (max-width: 640px) {
   .route-buddy-map::after {
-    background: rgba(231, 240, 236, .82);
+    background: rgba(241, 244, 243, .82);
   }
 
   .route-buddy-title {

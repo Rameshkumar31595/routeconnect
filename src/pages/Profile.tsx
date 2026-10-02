@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import { User, Mail, Phone, Save, X, Settings, Shield } from 'lucide-react';
 
 export default function Profile() {
   const { user, updateProfile } = useAuth();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -12,6 +14,41 @@ export default function Profile() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#E7F0EC] text-[#1F2933] flex flex-col">
+        <Navbar />
+        <main className="flex-1 w-full max-w-lg mx-auto px-4 py-16 flex items-center justify-center">
+          <div className="w-full bg-white border border-[#D9DED9] rounded-2xl p-8 shadow-sm text-center space-y-6">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-[#146B5B]/10 text-[#146B5B] mx-auto">
+              <User className="h-8 w-8" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-[#1F2933]">Account Profile</h1>
+              <p className="text-xs text-[#667085] font-semibold mt-1.5 leading-relaxed max-w-sm mx-auto">
+                Sign in or create an account to view your profile details, edit account info, and sync your saved journeys.
+              </p>
+            </div>
+            <div className="pt-2 space-y-3">
+              <button
+                onClick={() => navigate('/login')}
+                className="w-full py-3.5 px-4 rounded-xl bg-[#146B5B] hover:bg-[#0f5447] text-white font-extrabold text-sm transition shadow-sm cursor-pointer"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => navigate('/signup')}
+                className="w-full py-3.5 px-4 rounded-xl border border-[#D9DED9] hover:bg-gray-50 text-[#1F2933] font-extrabold text-sm transition cursor-pointer"
+              >
+                Sign Up / Create Account
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const handleSave = async () => {
     setError('');

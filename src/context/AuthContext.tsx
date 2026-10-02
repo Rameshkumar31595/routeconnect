@@ -11,8 +11,8 @@ interface User {
 interface AuthContextValue {
   user: User | null;
   sessionId: string | null;
-  login: (identifier: string, password: string) => Promise<void>;
-  register: (name: string, email: string, phone: string, password: string, confirmPassword: string) => Promise<void>;
+  login: (identifier: string, password: string, redirectTo?: string) => Promise<void>;
+  register: (name: string, email: string, phone: string, password: string, confirmPassword: string, redirectTo?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (name: string, email: string, phone: string) => Promise<void>;
 }
@@ -51,7 +51,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return response.json();
   };
 
-  const login = async (identifier: string, password: string) => {
+  const syncPendingSaveRoute = () => {
+    try {
+      const pending = localStorage.getItem('pending_save_route');
+      if (pending) {
+        const routeObj = JSON.parse(pending);
+        const savedRoutes = JSON.parse(localStorage.getItem('saved_routes') || '[]');
+        if (!savedRoutes.some((r: any) => r.id === routeObj.id)) {
+          savedRoutes.push(routeObj);
+          localStorage.setItem('saved_routes', JSON.stringify(savedRoutes));
+        }
+        localStorage.removeItem('pending_save_route');
+      }
+    } catch (e) {
+      console.error('Failed to sync pending save route:', e);
+    }
+  };
+
+  const login = async (identifier: string, password: string, redirectTo?: string) => {
     try {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
@@ -64,13 +81,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionId(data.sessionId);
       localStorage.setItem('routeconnect-user', JSON.stringify(data.user));
       localStorage.setItem('routeconnect-session', data.sessionId);
-      navigate('/dashboard');
+      
+      syncPendingSaveRoute();
+
+      if (redirectTo) {
+        navigate(redirectTo);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       throw error;
     }
   };
 
-  const register = async (name: string, email: string, phone: string, password: string, confirmPassword: string) => {
+  const register = async (name: string, email: string, phone: string, password: string, confirmPassword: string, redirectTo?: string) => {
     try {
       const response = await fetch(`${API_BASE}/auth/signup`, {
         method: 'POST',
@@ -83,7 +107,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionId(data.sessionId);
       localStorage.setItem('routeconnect-user', JSON.stringify(data.user));
       localStorage.setItem('routeconnect-session', data.sessionId);
-      navigate('/dashboard');
+
+      syncPendingSaveRoute();
+
+      if (redirectTo) {
+        navigate(redirectTo);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       throw error;
     }
@@ -100,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionId(null);
       localStorage.removeItem('routeconnect-user');
       localStorage.removeItem('routeconnect-session');
-      navigate('/login');
+      navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
       // Still log out on client side even if server request fails
@@ -108,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionId(null);
       localStorage.removeItem('routeconnect-user');
       localStorage.removeItem('routeconnect-session');
-      navigate('/login');
+      navigate('/');
     }
   };
 

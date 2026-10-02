@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { MapPin, Navigation, Map, X, Globe } from 'lucide-react';
+import { MapPin, Navigation, Map, X, Globe, Check, AlertCircle, Loader2 } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -13,35 +13,6 @@ export interface SuggestionItem {
   subtitle: string;
   district: string;
 }
-
-const AP_DISTRICTS = [
-  'Alluri Sitharama Raju',
-  'Anakapalli',
-  'Ananthapuramu',
-  'Annamayya',
-  'Bapatla',
-  'Chittoor',
-  'Dr. B. R. Ambedkar Konaseema',
-  'East Godavari',
-  'Eluru',
-  'Guntur',
-  'Kakinada',
-  'Krishna',
-  'Kurnool',
-  'Nandyal',
-  'NTR',
-  'Palnadu',
-  'Parvathipuram Manyam',
-  'Prakasam',
-  'Srikakulam',
-  'Sri Potti Sriramulu Nellore',
-  'Sri Sathya Sai',
-  'Tirupati',
-  'Visakhapatnam',
-  'Vizianagaram',
-  'West Godavari',
-  'YSR Kadapa'
-];
 
 const RICH_SUGGESTIONS: SuggestionItem[] = [
   // West Godavari (AP)
@@ -126,8 +97,39 @@ const RICH_SUGGESTIONS: SuggestionItem[] = [
   { name: 'Ongole', type: 'city', subtitle: 'Ongole Mandal, Prakasam, Andhra Pradesh', district: 'Prakasam' },
   { name: 'Ongole Bus Stand', type: 'bus', subtitle: 'Ongole Mandal, Prakasam, Andhra Pradesh', district: 'Prakasam' },
   { name: 'Ongole Railway Station', type: 'station', subtitle: 'Ongole Mandal, Prakasam, Andhra Pradesh', district: 'Prakasam' },
+  { name: 'Kanigiri', type: 'city', subtitle: 'Kanigiri Mandal, Prakasam, Andhra Pradesh', district: 'Prakasam' },
+  { name: 'Kanigiri Bus Stand', type: 'bus', subtitle: 'Kanigiri Mandal, Prakasam, Andhra Pradesh', district: 'Prakasam' },
   { name: 'Addanki', type: 'city', subtitle: 'Addanki Mandal, Bapatla, Andhra Pradesh', district: 'Bapatla' },
   { name: 'Chilakaluripeta', type: 'city', subtitle: 'Chilakaluripeta Mandal, Palnadu, Andhra Pradesh', district: 'Palnadu' },
+
+  // Multi-Modal Network & Village Transit Test Hubs
+  { name: 'Village A', type: 'city', subtitle: 'Rural Habitation, Prakasam District, Andhra Pradesh', district: 'Prakasam' },
+  { name: 'Village A Bus Stop', type: 'bus', subtitle: 'Feeder Bus Stop (1.2 km from Village A)', district: 'Prakasam' },
+  { name: 'Village B', type: 'city', subtitle: 'Rural Village (Intermediate Interchange), Prakasam', district: 'Prakasam' },
+  { name: 'Town B', type: 'city', subtitle: 'Regional Transit Hub, Prakasam District, Andhra Pradesh', district: 'Prakasam' },
+  { name: 'Town B Bus Stand', type: 'bus', subtitle: 'APSRTC Regional Bus Stand, Town B', district: 'Prakasam' },
+  { name: 'Town B Railway Station', type: 'station', subtitle: 'SCR Railway Station, Town B', district: 'Prakasam' },
+  { name: 'Town C', type: 'city', subtitle: 'Regional Highway Junction, Bapatla District', district: 'Bapatla' },
+  { name: 'Town C Bus Stand', type: 'bus', subtitle: 'APSRTC Bus Station, Town C', district: 'Bapatla' },
+  { name: 'Town C Railway Station', type: 'station', subtitle: 'SCR Railway Station, Town C', district: 'Bapatla' },
+  { name: 'Town X', type: 'city', subtitle: 'Regional Transit Hub, Palnadu District, Andhra Pradesh', district: 'Palnadu' },
+  { name: 'Town X Bus Stand', type: 'bus', subtitle: 'APSRTC Regional Bus Stand, Town X', district: 'Palnadu' },
+  { name: 'Town X Railway Station', type: 'station', subtitle: 'SCR Railway Station, Town X', district: 'Palnadu' },
+  { name: 'Town Y', type: 'city', subtitle: 'Highway Junction, Prakasam District, Andhra Pradesh', district: 'Prakasam' },
+  { name: 'Town Y Bus Stand', type: 'bus', subtitle: 'APSRTC Bus Station, Town Y', district: 'Prakasam' },
+  { name: 'Railway Station X', type: 'station', subtitle: 'SCR Rail Hub Station X, Palnadu', district: 'Palnadu' },
+  { name: 'Railway Station Z', type: 'station', subtitle: 'Rural Rail Junction, South Central Railway', district: 'Palnadu' },
+  { name: 'Railway Station D', type: 'station', subtitle: 'Intermediate Rail Junction Station D', district: 'Prakasam' },
+  { name: 'Railway Station Y', type: 'station', subtitle: 'City Gateway Rail Station Y', district: 'Prakasam' },
+  { name: 'City B', type: 'city', subtitle: 'Major Urban Terminal, Andhra Pradesh', district: 'Prakasam' },
+  { name: 'City B Railway Station', type: 'station', subtitle: 'Main Railway Terminal, City B', district: 'Prakasam' },
+  { name: 'City B Bus Stand', type: 'bus', subtitle: 'Central Bus Stand, City B', district: 'Prakasam' },
+  { name: 'City D', type: 'city', subtitle: 'Major Urban Terminal City D, Andhra Pradesh', district: 'Prakasam' },
+  { name: 'City D Railway Station', type: 'station', subtitle: 'Main Rail Terminal, City D', district: 'Prakasam' },
+  { name: 'City D Bus Stand', type: 'bus', subtitle: 'Central RTC Bus Station, City D', district: 'Prakasam' },
+  { name: 'City C', type: 'city', subtitle: 'Major Urban City C, Andhra Pradesh', district: 'Prakasam' },
+  { name: 'City C Railway Station', type: 'station', subtitle: 'Main Rail Terminal, City C', district: 'Prakasam' },
+  { name: 'Final Destination', type: 'landmark', subtitle: 'Urban Center / IT Tech Park, Ongole', district: 'Prakasam' },
 
   // North India Major Cities
   { name: 'Delhi', type: 'city', subtitle: 'National Capital Territory, Delhi NCR, India', district: 'Delhi NCR' },
@@ -205,24 +207,31 @@ interface LocationInputProps {
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
+  onCurrentLocation?: (latitude: number, longitude: number) => void;
   suggestions?: string[];
 }
 
-export default function LocationInput({ label, placeholder, value, onChange }: LocationInputProps) {
+export default function LocationInput({ label, placeholder, value, onChange, onCurrentLocation }: LocationInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
+  const [showDownwardMap, setShowDownwardMap] = useState(false);
+  const [detectedCoords, setDetectedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [detectedAddress, setDetectedAddress] = useState('');
+  const [permissionError, setPermissionError] = useState('');
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const [customPin, setCustomPin] = useState<{ x: number; y: number } | null>(null);
   const [googleMapError, setGoogleMapError] = useState('');
+  const [googleLocationError, setGoogleLocationError] = useState('');
   const [googleMapLoading, setGoogleMapLoading] = useState(false);
-  const [selectedMapLocation, setSelectedMapLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  const [selectedMapLocation, setSelectedMapLocation] = useState<{ lat: number; lng: number; address: string; isCurrentLocation?: boolean } | null>(null);
   const [requestLocationOnOpen, setRequestLocationOnOpen] = useState(false);
-  const [selectedDistrict, setSelectedDistrict] = useState<string>('all');
   const containerRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<HTMLDivElement>(null);
   const googleMapInstanceRef = useRef<any>(null);
   const googleMarkerRef = useRef<any>(null);
   const googleGeocoderRef = useRef<any>(null);
+  const initialMapLocationRef = useRef<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -246,6 +255,7 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
     let cancelled = false;
     setGoogleMapLoading(true);
     setGoogleMapError('');
+    setGoogleLocationError('');
 
     const loadGoogleMaps = () => new Promise<void>((resolve, reject) => {
       if (window.google?.maps) {
@@ -287,7 +297,7 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
         googleMarkerRef.current = marker;
         googleGeocoderRef.current = geocoder;
 
-        const selectCoordinate = (lat: number, lng: number) => {
+        const selectCoordinate = (lat: number, lng: number, isCurrentLocation = false) => {
           const position = { lat, lng };
           marker.setPosition(position);
           marker.setVisible(true);
@@ -296,7 +306,7 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
             const address = status === 'OK' && results?.[0]?.formatted_address
               ? results[0].formatted_address
               : `Pinned Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
-            if (!cancelled) setSelectedMapLocation({ lat, lng, address });
+            if (!cancelled) setSelectedMapLocation({ lat, lng, address, isCurrentLocation });
           });
         };
 
@@ -308,15 +318,21 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
           if (position) selectCoordinate(position.lat(), position.lng());
         });
 
+        if (initialMapLocationRef.current) {
+          const { lat, lng } = initialMapLocationRef.current;
+          initialMapLocationRef.current = null;
+          selectCoordinate(lat, lng, true);
+        }
+
         if (requestLocationOnOpen && navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
-            (position) => selectCoordinate(position.coords.latitude, position.coords.longitude),
-            () => setGoogleMapError('Location permission was denied. You can still click the map to choose a location.'),
+            (position) => selectCoordinate(position.coords.latitude, position.coords.longitude, true),
+            () => setGoogleLocationError('Location permission was denied. You can still click the map to choose a location.'),
             { enableHighAccuracy: true, timeout: 10000 }
           );
           setRequestLocationOnOpen(false);
         } else if (requestLocationOnOpen) {
-          setGoogleMapError('Location permission is not supported by this browser. You can still click the map to choose a location.');
+          setGoogleLocationError('Location permission is not supported by this browser. You can still click the map to choose a location.');
           setRequestLocationOnOpen(false);
         }
       })
@@ -339,17 +355,14 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
     if (!value.trim()) return [];
     const query = value.toLowerCase().trim();
 
+    const isCurrentLocQuery = /^(?:📍\s*)?(?:curr|current|gps|my\s*loc|use\s*my|use\s*curr|here)/i.test(query);
+
     let matches = RICH_SUGGESTIONS.filter(
       (item) => item.name.toLowerCase().includes(query) || item.subtitle.toLowerCase().includes(query)
     );
 
-    // Apply District Filter selection
-    if (selectedDistrict !== 'all') {
-      matches = matches.filter((m) => m.district.toLowerCase() === selectedDistrict.toLowerCase());
-    }
-
     // Dynamic autocomplete fallback
-    if (matches.length === 0) {
+    if (matches.length === 0 && !isCurrentLocQuery) {
       const capQuery = value.charAt(0).toUpperCase() + value.slice(1);
       return [
         { name: capQuery, type: 'city', subtitle: `${capQuery}, India`, district: 'India' } as SuggestionItem,
@@ -359,6 +372,21 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
     }
 
     const finalMatches: SuggestionItem[] = [];
+    if (isCurrentLocQuery) {
+      finalMatches.push({
+        name: '📍 Use My Current Location',
+        type: 'landmark',
+        subtitle: 'Detect current location and preview on Google Map',
+        district: 'GPS'
+      });
+      finalMatches.push({
+        name: '📍 Current Location',
+        type: 'landmark',
+        subtitle: 'Use your actual current GPS location',
+        district: 'GPS'
+      });
+    }
+
     matches.slice(0, 10).forEach((m) => {
       finalMatches.push(m);
       
@@ -417,7 +445,7 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
     }
 
     return uniqueMatches;
-  }, [value, selectedDistrict]);
+  }, [value]);
 
   const getEmojiForType = (type: SuggestionItem['type']) => {
     switch (type) {
@@ -432,42 +460,85 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
   };
 
   const handleUseCurrentLocation = () => {
+    setIsFocused(false);
+    setPermissionError('');
     if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
+      setPermissionError('Geolocation is not supported by your browser. Please enter your starting location manually.');
       return;
     }
 
+    setIsRequestingPermission(true);
     setGeoLoading(true);
+
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
-        onChange(`Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
         setGeoLoading(false);
-        setIsFocused(false);
+        setIsRequestingPermission(false);
+        setPermissionError('');
+        setDetectedCoords({ lat: latitude, lng: longitude });
+        setDetectedAddress('Detecting address...');
+        setShowDownwardMap(true);
+
+        try {
+          const res = await fetch(`/api/geo/reverse?lat=${latitude}&lng=${longitude}`);
+          if (res.ok) {
+            const data = await res.json();
+            setDetectedAddress(data.address || data.name || `Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+          } else {
+            setDetectedAddress(`Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+          }
+        } catch {
+          setDetectedAddress(`Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`);
+        }
       },
       (error) => {
-        console.error(error);
-        alert(error.code === error.PERMISSION_DENIED
-          ? 'Location permission was denied. Allow location access in your browser and try again.'
-          : 'Unable to determine your current location.');
         setGeoLoading(false);
+        setIsRequestingPermission(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          setPermissionError('Location permission was denied. Please allow location access in your browser settings to use your current location, or enter a location manually.');
+        } else {
+          setPermissionError('Unable to detect your current location. Please check your GPS or device location settings.');
+        }
       },
-      { timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
+  };
+
+  const handleProceedWithCurrentLocation = () => {
+    if (!detectedCoords) return;
+    onChange('📍 Current Location');
+    onCurrentLocation?.(detectedCoords.lat, detectedCoords.lng);
+    setShowDownwardMap(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const trimmed = value.trim().toLowerCase();
+      if (/^(?:📍\s*)?(?:use\s+)?(?:my\s+)?current\s*location$/i.test(trimmed) || trimmed === 'here' || trimmed === 'gps') {
+        e.preventDefault();
+        handleUseCurrentLocation();
+      }
+    }
   };
 
   const confirmMapSelection = (selectedName: string) => {
     onChange(selectedName);
+    if (selectedMapLocation?.isCurrentLocation) {
+      onCurrentLocation?.(selectedMapLocation.lat, selectedMapLocation.lng);
+    }
+    initialMapLocationRef.current = null;
     setShowMapPicker(false);
     setCustomPin(null);
   };
 
   const useCurrentLocationOnGoogleMap = () => {
     if (!navigator.geolocation) {
-      setGoogleMapError('Location permission is not supported by this browser.');
+      setGoogleLocationError('Location permission is not supported by this browser. You can still select a point on the map.');
       return;
     }
 
+    setGoogleLocationError('');
     setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -476,7 +547,8 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
           setSelectedMapLocation({
             lat: latitude,
             lng: longitude,
-            address: `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`
+            address: '📍 Current Location',
+            isCurrentLocation: true
           });
           setGeoLoading(false);
           return;
@@ -489,15 +561,15 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
           const address = status === 'OK' && results?.[0]?.formatted_address
             ? results[0].formatted_address
             : `Current Location (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
-          setSelectedMapLocation({ lat: latitude, lng: longitude, address });
+          setSelectedMapLocation({ lat: latitude, lng: longitude, address, isCurrentLocation: true });
           setGeoLoading(false);
         });
       },
       (error) => {
         setGeoLoading(false);
-        setGoogleMapError(error.code === error.PERMISSION_DENIED
-          ? 'Location permission was denied. Allow location access in your browser and try again.'
-          : 'Unable to determine your current location.');
+        setGoogleLocationError(error.code === error.PERMISSION_DENIED
+          ? 'Location permission was denied. Allow location access in your browser, or select a point on the map.'
+          : 'Unable to determine your current location. You can still select a point on the map.');
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -520,41 +592,36 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onFocus={() => setIsFocused(true)}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full rounded-xl border border-[#D9DED9] bg-white px-4 py-3 text-sm text-[#1F2933] outline-none transition focus:border-[#146B5B] focus:ring-1 focus:ring-[#146B5B]"
+          className="w-full rounded-xl border border-[#D9DED9] bg-white pl-4 pr-11 py-3 text-sm text-[#1F2933] shadow-sm outline-none transition hover:border-[#B9C6C1] focus:border-[#146B5B] focus:ring-1 focus:ring-[#146B5B]"
         />
+
+        {/* Quick GPS target button inside input */}
+        <button
+          type="button"
+          onClick={handleUseCurrentLocation}
+          title="Use My Current Location"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-400 hover:bg-emerald-50 hover:text-emerald-700 transition"
+        >
+          <Navigation className={`h-4 w-4 ${isRequestingPermission ? 'animate-spin text-emerald-600' : ''}`} />
+        </button>
 
         {/* Dropdown suggestions popup */}
         {isFocused && (
           <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-xl max-h-[340px] overflow-y-auto">
             
-            {/* District Selector Filter Dropdown (restricted to AP districts) */}
-            <div className="px-4 py-2 border-b border-blue-100 bg-blue-50/50 flex items-center justify-between gap-2">
-              <span className="text-[10px] font-black uppercase text-blue-500 tracking-wider">AP District Filter</span>
-              <select
-                value={selectedDistrict}
-                onChange={(e) => setSelectedDistrict(e.target.value)}
-                onMouseDown={(e) => e.stopPropagation()} 
-                className="text-xs bg-white border border-blue-200 rounded px-2.5 py-1 text-blue-900 font-extrabold outline-none cursor-pointer"
-              >
-                <option value="all">🔍 All Districts</option>
-                {AP_DISTRICTS.map(dist => (
-                  <option key={dist} value={dist}>{dist}</option>
-                ))}
-              </select>
-            </div>
-
             {/* Geolocation trigger */}
             <button
               type="button"
               onMouseDown={(e) => {
                 e.preventDefault();
-                handleUseCurrentLocation();
               }}
-              className="w-full px-4 py-3 text-left text-sm text-blue-700 hover:bg-blue-50 flex items-center gap-2.5 border-b border-blue-50 font-bold transition"
+              onClick={handleUseCurrentLocation}
+              className="w-full px-4 py-3 text-left text-sm text-emerald-700 hover:bg-emerald-50 flex items-center gap-2.5 border-b border-emerald-50 font-bold transition"
             >
-              <Navigation className={`h-4 w-4 text-blue-500 ${geoLoading ? 'animate-spin' : ''}`} />
-              {geoLoading ? 'Querying geolocation...' : '📍 Use My Current Location'}
+              <Navigation className={`h-4 w-4 text-emerald-600 ${isRequestingPermission ? 'animate-spin' : ''}`} />
+              {isRequestingPermission ? 'Asking for location permission...' : '📍 Use My Current Location'}
             </button>
 
             {/* Map selector trigger */}
@@ -581,8 +648,12 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
                     key={idx}
                     type="button"
                     onMouseDown={() => {
-                      onChange(item.name);
-                      setIsFocused(false);
+                      if (item.name === '📍 Current Location' || item.name === '📍 Use My Current Location' || item.name.toLowerCase().includes('current location')) {
+                        handleUseCurrentLocation();
+                      } else {
+                        onChange(item.name);
+                        setIsFocused(false);
+                      }
                     }}
                     className={`w-full px-4 py-3 text-left text-sm hover:bg-blue-50 flex items-center gap-3 transition border-b border-blue-50/50 last:border-b-0 ${isNearby ? 'bg-amber-50/30 pl-8' : ''}`}
                   >
@@ -605,6 +676,105 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
         )}
       </div>
 
+      {/* Asking for Location Permission Status */}
+      {isRequestingPermission && (
+        <div className="mt-2 flex items-center gap-2.5 rounded-xl border border-blue-200 bg-blue-50/95 px-3.5 py-3 text-xs font-semibold text-blue-900 shadow-sm animate-pulse">
+          <Loader2 className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
+          <span>Asking for location permission... Please click <strong>&ldquo;Allow&rdquo;</strong> in your browser prompt to view your location on Google Maps.</span>
+        </div>
+      )}
+
+      {/* Permission Denied / Error Banner */}
+      {permissionError && (
+        <div className="mt-2 flex items-start justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs font-semibold text-amber-900 shadow-sm animate-in fade-in">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-bold text-amber-950">Location Permission Required</p>
+              <p className="text-[11px] text-amber-800 mt-0.5">{permissionError}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPermissionError('')}
+            className="text-amber-700 hover:text-amber-950 p-1 text-sm font-bold"
+            title="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Downward Google Map with Current Location and Proceed Option */}
+      {showDownwardMap && detectedCoords && (
+        <div className="mt-2.5 w-full rounded-2xl border-2 border-emerald-500/40 bg-white p-3.5 shadow-xl transition-all animate-in fade-in slide-in-from-top-2 relative z-20">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </span>
+              <span className="text-xs font-extrabold text-[#146B5B] uppercase tracking-wider">
+                Google Map — Current Location
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDownwardMap(false)}
+              className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition"
+              title="Close Map"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Google Map View */}
+          <div className="relative mt-2.5 h-56 sm:h-64 w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-inner">
+            <iframe
+              title="Google Map Current Location"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://maps.google.com/maps?q=${detectedCoords.lat},${detectedCoords.lng}&hl=en&z=15&output=embed`}
+            />
+          </div>
+
+          {/* Detected Address Details */}
+          <div className="mt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 rounded-xl bg-[#F0FDF4] border border-emerald-100 p-2.5 text-xs text-emerald-950 font-medium">
+            <div className="flex items-center gap-2 min-w-0">
+              <MapPin className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span className="font-bold truncate text-emerald-900">{detectedAddress || '📍 Current GPS Location'}</span>
+            </div>
+            <span className="text-[11px] font-mono text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-md shrink-0 self-start sm:self-auto">
+              {detectedCoords.lat.toFixed(4)}° N, {detectedCoords.lng.toFixed(4)}° E
+            </span>
+          </div>
+
+          {/* Action buttons with Proceed option */}
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleProceedWithCurrentLocation}
+              className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-xl transition shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+            >
+              <Check className="h-4 w-4 stroke-[3]" />
+              <span>Proceed with Current Location</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDownwardMap(false)}
+              className="py-3 px-4 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-xs transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+
       {/* Map selection Modal overlay */}
       {showMapPicker && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F2933]/45 backdrop-blur-sm p-4 animate-fadeIn">
@@ -619,6 +789,7 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
                   setShowMapPicker(false);
                   setCustomPin(null);
                   setSelectedMapLocation(null);
+                  initialMapLocationRef.current = null;
                 }}
                 className="rounded-full bg-white/20 p-2 hover:bg-white/30 transition"
               >
@@ -657,6 +828,11 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
                   </div>
                 )}
               </div>
+              {googleLocationError && (
+                <p role="status" className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  {googleLocationError}
+                </p>
+              )}
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
@@ -673,7 +849,7 @@ export default function LocationInput({ label, placeholder, value, onChange }: L
                   disabled={!selectedMapLocation}
                   className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl transition shadow-md"
                 >
-                  ✓ Use Selected Location
+                  ✓ Proceed
                 </button>
               </div>
               {selectedMapLocation && (

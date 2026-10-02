@@ -67,7 +67,9 @@ const MODE_COLORS = {
   bus: '#16a34a',     // Green
   uber: '#0f172a',    // Black (Slate-900)
   rapido: '#ea580c',  // Orange
-  walking: '#64748b'  // Gray (Slate-500)
+  walking: '#64748b',
+  flight: '#4f46e5',
+  airport_transfer: '#0f766e'
 };
 
 const MODE_EMOJIS = {
@@ -75,7 +77,9 @@ const MODE_EMOJIS = {
   bus: '🚌',
   uber: '🚗',
   rapido: '🛵',
-  walking: '🚶'
+  walking: '🚶',
+  flight: '✈️',
+  airport_transfer: '🚕'
 };
 
 export default function RouteMap({ route, isOpen, onClose }: RouteMapProps) {
@@ -136,17 +140,38 @@ export default function RouteMap({ route, isOpen, onClose }: RouteMapProps) {
         bus: '#16a34a',
         uber: '#0f172a',
         rapido: '#ea580c',
-        walking: '#64748b'
+        walking: '#64748b',
+        flight: '#4f46e5',
+        airport_transfer: '#0f766e'
       };
       const travelModes: Record<string, any> = {
         train: 'TRANSIT',
         bus: 'TRANSIT',
         uber: 'DRIVING',
         rapido: 'DRIVING',
-        walking: 'WALKING'
+        walking: 'WALKING',
+        airport_transfer: 'DRIVING'
       };
 
       route.segments.forEach((segment) => {
+        if (segment.mode === 'flight') {
+          if (segment.fromCoordinates && segment.toCoordinates) {
+            const flightLine = new window.google.maps.Polyline({
+              map,
+              path: [
+                { lat: segment.fromCoordinates.latitude, lng: segment.fromCoordinates.longitude },
+                { lat: segment.toCoordinates.latitude, lng: segment.toCoordinates.longitude }
+              ],
+              geodesic: true,
+              strokeColor: colors.flight,
+              strokeWeight: 3,
+              strokeOpacity: 0.75
+            });
+            renderers.push(flightLine);
+          }
+          return;
+        }
+        if (segment.detailsAvailable === false) return;
         const renderer = new window.google.maps.DirectionsRenderer({
           map,
           suppressMarkers: false,
