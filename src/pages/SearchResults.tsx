@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import RouteCard from '../components/RouteCard';
 import LoadingState from '../components/LoadingState';
 import { searchMultiModalRoutes, FlightSearchInfo, RouteInsights, RouteResult } from '../services/routeService';
+import { isRideHailingRoute } from '../services/rideHailing';
 import { SlidersHorizontal, ArrowUpDown, X, Filter, ChevronLeft } from 'lucide-react';
 
 export default function SearchResults() {
@@ -264,16 +265,23 @@ export default function SearchResults() {
       return getTagWeight(a) - getTagWeight(b);
     });
 
-    return result;
+    // Estimated ride-hailing options (Uber/Rapido) are formula-based, so whatever the sort order they are
+    // listed after the timetable-backed routes instead of competing with them.
+    return [
+      ...result.filter(r => !isRideHailingRoute(r)),
+      ...result.filter(isRideHailingRoute)
+    ];
   }, [allRoutes, sortBy, maxPrice, filterModes, busTypes, durations, transfers, departureTimes, routeTypes]);
 
-  // Requirement: The route which is having less time is fastest, the route having lowest cost is budget route
+  // Requirement: The route which is having less time is fastest, the route having lowest cost is budget route.
+  // Only timetable-backed routes compete: estimated ride-hailing (Uber/Rapido) durations and fares are formulas.
   const { minDuration, minCost } = useMemo(() => {
-    if (filteredAndSortedRoutes.length === 0) {
+    const trustedRoutes = filteredAndSortedRoutes.filter(r => !isRideHailingRoute(r));
+    if (trustedRoutes.length === 0) {
       return { minDuration: null, minCost: null };
     }
-    const durations = filteredAndSortedRoutes.map(r => r.totalDurationMinutes);
-    const costs = filteredAndSortedRoutes.map(r => r.totalPrice);
+    const durations = trustedRoutes.map(r => r.totalDurationMinutes);
+    const costs = trustedRoutes.map(r => r.totalPrice);
     return {
       minDuration: Math.min(...durations),
       minCost: Math.min(...costs)
@@ -417,9 +425,9 @@ export default function SearchResults() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Verified Schedules & Fares
+                <span className="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
+                  <span className="h-2 w-2 rounded-full bg-slate-400"></span>
+                  Schedule &amp; fare confidence varies by route
                 </span>
               </div>
             </div>
@@ -441,8 +449,9 @@ export default function SearchResults() {
               /* Travel Options displayed ONE BY ONE down the page */
               <div className="space-y-5" aria-label="Available Travel Options">
                 {filteredAndSortedRoutes.map((route, index) => {
-                  const isFastest = minDuration !== null && route.totalDurationMinutes === minDuration;
-                  const isBudget = minCost !== null && route.totalPrice === minCost;
+                  const isEstimatedRide = isRideHailingRoute(route);
+                  const isFastest = !isEstimatedRide && minDuration !== null && route.totalDurationMinutes === minDuration;
+                  const isBudget = !isEstimatedRide && minCost !== null && route.totalPrice === minCost;
                   return (
                     <div key={route.id} id={`route-${route.id}`}>
                       <RouteCard
