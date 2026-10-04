@@ -5,6 +5,14 @@
 // a live fare, a live duration, or compete with timetable-backed public transport for "fastest",
 // "cheapest/budget" or "recommended".
 
+// PRODUCT DECISION: ride-hailing is OFF. RouteConnect has no provider integration for Uber or Rapido, so the
+// legacy planner no longer generates (or prices) ride-hailing options at all, and the v2 planner never has.
+// The generation code is kept only behind this development switch, to be reintroduced in a future phase if a
+// legitimate provider integration becomes available. Never enable it for end users.
+export function isLegacyRideHailingEnabled(env = process.env) {
+  return env.ROUTECONNECT_LEGACY_RIDE_HAILING === '1';
+}
+
 export const RIDE_HAILING_MODES = Object.freeze(['uber', 'rapido']);
 
 export const RIDE_HAILING_NOTE =

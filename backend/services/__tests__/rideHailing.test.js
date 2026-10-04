@@ -14,7 +14,7 @@ globalThis.fetch = async () => { throw new Error('network disabled in tests'); }
 const { db, initializeDatabase } = await import('../../db/database.js');
 const { findMultiModalRoutes, createGpsRideOptions } = await import('../routingEngine.js');
 const {
-  RIDE_HAILING_ESTIMATE_METADATA, stampRideHailingRoute, isRideHailingRoute, isRideHailingSegment
+  RIDE_HAILING_ESTIMATE_METADATA, stampRideHailingRoute, isRideHailingRoute, isRideHailingSegment, isLegacyRideHailingEnabled
 } = await import('../rideHailing.js');
 
 const GPS_BHIMAVARAM = { latitude: 16.5449, longitude: 81.5212 };
@@ -96,7 +96,38 @@ describe('ride-hailing metadata', () => {
   });
 });
 
-describe('planner: short trip from GPS (door-to-door estimates only alongside local options)', () => {
+// ---------------------------------------------------------------------------------------------------------------------
+// PRODUCT DECISION: ride-hailing is off. These tests pin the default behaviour.
+// ---------------------------------------------------------------------------------------------------------------------
+describe('product decision: ride-hailing is OFF by default', () => {
+  test('the development switch is off unless explicitly set to "1"', () => {
+    assert.equal(isLegacyRideHailingEnabled({}), false);
+    assert.equal(isLegacyRideHailingEnabled({ ROUTECONNECT_LEGACY_RIDE_HAILING: 'true' }), false);
+    assert.equal(isLegacyRideHailingEnabled({ ROUTECONNECT_LEGACY_RIDE_HAILING: '0' }), false);
+    assert.equal(isLegacyRideHailingEnabled({ ROUTECONNECT_LEGACY_RIDE_HAILING: '1' }), true);
+    assert.equal(process.env.ROUTECONNECT_LEGACY_RIDE_HAILING, undefined, 'tests must start with the switch unset');
+  });
+
+  test('a GPS search never produces Uber/Rapido options, priced or not, even on a short trip', async () => {
+    for (const [to, origin] of [['Ongole Railway Station', GPS_ONGOLE], ['Kalla Bus Stop', GPS_BHIMAVARAM], ['Vijayawada', GPS_BHIMAVARAM]]) {
+      const routes = await search(CURRENT, to, origin);
+      assert.ok(routes.length > 0, `public-transport routes are still returned for ${to}`);
+      for (const route of routes) {
+        assert.equal(isRideHailingRoute(route), false, `ride-hailing leaked into ${to}`);
+        assert.ok(!/uber|rapido/i.test(JSON.stringify(route)), `ride-hailing text leaked into ${to}`);
+        assert.equal(route.rankingClass, undefined);
+        assert.equal(route.providerIntegration, undefined);
+      }
+    }
+  });
+});
+
+// The remaining ride-hailing tests exercise the DEVELOPMENT-ONLY code path (switch on) to prove that, even then,
+// estimates are honestly labelled and never ranked. End users never get this path.
+describe('development switch on: legacy estimates stay honest', () => {
+  before(() => { process.env.ROUTECONNECT_LEGACY_RIDE_HAILING = '1'; });
+  after(() => { delete process.env.ROUTECONNECT_LEGACY_RIDE_HAILING; });
+
   test('Uber/Rapido are present, honest and listed last', async () => {
     const routes = await search(CURRENT, 'Ongole Railway Station', GPS_ONGOLE);
     const rides = routes.filter(isRideHailingRoute);
@@ -107,9 +138,13 @@ describe('planner: short trip from GPS (door-to-door estimates only alongside lo
   });
 });
 
-describe('planner: GPS trip with timetable-backed alternatives', () => {
+describe('development switch on: GPS trip with timetable-backed alternatives', () => {
   let routes;
-  before(async () => { routes = await search(CURRENT, 'Kalla Bus Stop', GPS_BHIMAVARAM); });
+  before(async () => {
+    process.env.ROUTECONNECT_LEGACY_RIDE_HAILING = '1';
+    routes = await search(CURRENT, 'Kalla Bus Stop', GPS_BHIMAVARAM);
+  });
+  after(() => { delete process.env.ROUTECONNECT_LEGACY_RIDE_HAILING; });
 
   test('estimated rides are shown but never carry Fastest / Budget / Recommended', () => {
     const rides = routes.filter(isRideHailingRoute);

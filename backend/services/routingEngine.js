@@ -11,7 +11,7 @@ import { findDirectBusRoutes, findRuralFeederBus, findMultiStageBusRoutes } from
 import { fetchNearbyOsmStops } from './osmTransitService.js';
 import { validateRouteIntegrity } from './dataPipelineService.js';
 import { buildCompleteAirJourneys } from './flightService.js';
-import { isRideHailingRoute, stampRideHailingRoute } from './rideHailing.js';
+import { isLegacyRideHailingEnabled, isRideHailingRoute, stampRideHailingRoute } from './rideHailing.js';
 
 export function calculateSegmentPrice(mode, basePrice, passengers = 1) {
   if (mode === 'train' || mode === 'bus') {
@@ -442,6 +442,9 @@ export async function findMultiModalRoutes(fromCity, toCity, date, timeStr, pass
   // Strict Location-Based Rule (Requirement 4):
   // IF fromLocation.type == "CURRENT_GPS_LOCATION" THEN Allow Uber/Rapido ELSE Hide Uber/Rapido
   const isCurrentGpsOrigin = Boolean(locFrom && locFrom.type === 'CURRENT_GPS_LOCATION');
+  // Ride-hailing is a product-level "off" (no provider integration): nothing below is generated or priced
+  // unless the development-only switch is set. See rideHailing.js.
+  const rideHailingEnabled = isLegacyRideHailingEnabled();
 
   // OpenStreetMap Transit Infrastructure Discovery (Permitted Open Data ODbL)
   if (locFrom && Number.isFinite(locFrom.latitude)) {
@@ -579,7 +582,7 @@ export async function findMultiModalRoutes(fromCity, toCity, date, timeStr, pass
       }]
     });
 
-    if (isCurrentGpsOrigin) {
+    if (isCurrentGpsOrigin && rideHailingEnabled) {
       candidateRoutes.push(...createGpsRideOptions(locFrom.name, locTo.name, directDist));
     }
 
@@ -977,12 +980,12 @@ export async function findMultiModalRoutes(fromCity, toCity, date, timeStr, pass
   }
 
   // GPS Direct ride options (Uber & Rapido) ONLY when From is explicitly Current GPS Location
-  if (isCurrentGpsOrigin && directDist <= 85.0) {
+  if (isCurrentGpsOrigin && rideHailingEnabled && directDist <= 85.0) {
     candidateRoutes.push(...createGpsRideOptions(locFrom.name, locTo.name, directDist));
   }
 
-  // Feeder connections with Uber / Rapido from Current GPS Location (Requirement 2)
-  if (isCurrentGpsOrigin) {
+  // Feeder connections with Uber / Rapido from Current GPS Location (development-only; off by default)
+  if (isCurrentGpsOrigin && rideHailingEnabled) {
     const primaryStation = startStations[0];
     if (primaryStation) {
       const distToStation = getDistance(locFrom.latitude, locFrom.longitude, primaryStation.latitude, primaryStation.longitude);

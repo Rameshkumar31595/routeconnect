@@ -12,7 +12,8 @@
     "test": "node --test \"backend/**/*.test.js\"",
     "transit:download": "node backend/transit/cli/download.js",
     "transit:validate": "node backend/transit/cli/validate.js",
-    "transit:import": "node backend/transit/cli/import.js"
+    "transit:import": "node backend/transit/cli/import.js",
+    "transit:compare": "node backend/transit/cli/compare.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

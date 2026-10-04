@@ -15,6 +15,9 @@ import { findMultiModalRoutes } from './services/routingEngine.js';
 import { getGoogleRouteInsights } from './services/googleMapsService.js';
 import { getFlightOptions } from './services/flightService.js';
 import { getTransitStatus } from './transit/status.js';
+import { handlePlanRequest } from './transit/routing/planner.js';
+import { getTransitNetwork } from './transit/routing/dataLoader.js';
+import { handlePlaceSearch } from './transit/routing/placeSearch.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -288,6 +291,18 @@ app.get('/api/transit/status', (req, res) => {
   }
 });
 
+// GTFS time-aware planner (RAPTOR). Independent of the legacy /api/planner above, which is unchanged.
+app.get('/api/v2/plan', (req, res) => {
+  const { status, body } = handlePlanRequest(req.query);
+  return res.status(status).json(body);
+});
+
+// Stop/place autocomplete for the GTFS planner: only places that exist in the timetable are suggested.
+app.get('/api/v2/places', (req, res) => {
+  const { status, body } = handlePlaceSearch(req.query, () => getTransitNetwork());
+  return res.status(status).json(body);
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.status(200).json({
@@ -315,4 +330,13 @@ if (fs.existsSync(distPath)) {
 
 app.listen(PORT, () => {
   console.log(`RouteConnect server running on http://localhost:${PORT}`);
+  // Warm the in-memory transit network so the first /api/v2/plan request is fast (skipped if nothing is imported).
+  setImmediate(() => {
+    try {
+      const network = getTransitNetwork();
+      if (network) console.log(`Transit network ready: ${network.stats.patterns} patterns, ${network.stats.stops} stops (${network.stats.loadTimeMs} ms)`);
+    } catch (error) {
+      console.warn('Transit network warm-up skipped:', error.message);
+    }
+  });
 });
